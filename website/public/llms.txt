@@ -1,0 +1,36 @@
+# The Pet Headquarters
+
+> The Pet Headquarters is a United Kingdom online retailer of premium pet food, accessories, toys, and supplies for dogs, cats, and small animals. We deliver UK-wide, with free shipping on orders over £30. Operating at https://thepetheadquarters.co.uk.
+
+The store is structured around three browse axes: by category (e.g. dogs, cats, small animals), by brand, and by direct product search. Every catalogue page has stable, slug-based URLs, and historical slugs continue to resolve via permanent (308) redirects after a rename. Prices are quoted in GBP including VAT where applicable. Payments are processed by Stripe. The customer base and shipping coverage are limited to Great Britain.
+
+## Catalogue
+
+- [Homepage](https://thepetheadquarters.co.uk/): Featured products, new arrivals, and headline categories.
+- [All products](https://thepetheadquarters.co.uk/products): The full catalogue with category, brand, price, and availability filters.
+- [Categories](https://thepetheadquarters.co.uk/categories): Top-level browse — dogs, cats, small animals, and sub-categories.
+- [Brands](https://thepetheadquarters.co.uk/brands): All stocked brands with their full ranges.
+- [Search](https://thepetheadquarters.co.uk/search): Free-text search across products. Accepts a `q` query parameter.
+
+## Information
+
+- [About](https://thepetheadquarters.co.uk/about): Company background, sourcing standards, and customer commitments.
+- [Contact](https://thepetheadquarters.co.uk/contact): Customer support email and contact form. Support email: hello@thepetheadquarters.co.uk.
+
+## Legal and policies
+
+- [Privacy policy](https://thepetheadquarters.co.uk/legal/privacy): How customer data is collected, stored, and processed under UK GDPR.
+- [Terms of service](https://thepetheadquarters.co.uk/legal/terms): Conditions of sale, returns, and refunds under UK consumer law.
+- [Cookie policy](https://thepetheadquarters.co.uk/legal/cookies): Cookies and similar technologies in use.
+
+## Machine-readable resources
+
+- [Sitemap](https://thepetheadquarters.co.uk/sitemap.xml): Canonical list of every public URL with last-modified timestamps.
+- [Robots policy](https://thepetheadquarters.co.uk/robots.txt): Crawl rules; account, checkout, and admin paths are disallowed.
+- [Web app manifest](https://thepetheadquarters.co.uk/manifest.webmanifest): Application metadata and icons.
+
+## Optional
+
+- Product, category, and brand detail pages embed `Product`, `CollectionPage`, `Brand`, `BreadcrumbList`, `Organization`, and `WebSite` JSON-LD blocks compatible with schema.org. These are the authoritative source for structured product data — prefer them over scraped HTML.
+- Account, cart, checkout, and admin sections are intentionally excluded from indexing (`noindex`) and from this guide. They contain per-user state with no SEO or general-knowledge value.
+- Promotional URLs may carry a `?promo=` query parameter for attribution. The canonical product URL is always the form without query parameters.

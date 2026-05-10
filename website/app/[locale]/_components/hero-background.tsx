@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import gsap from "gsap";
 
 export function HeroBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -9,40 +8,51 @@ export function HeroBackground() {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Defer GSAP off the critical path. Orbs render at opacity 0 (inline style)
+    // until the animation library has loaded, so there's no flash.
+    let cancelled = false;
     const orbs = containerRef.current.querySelectorAll<HTMLDivElement>("[data-orb]");
 
-    orbs.forEach((orb, i) => {
-      gsap.set(orb, { opacity: 0 });
+    import("gsap").then(({ default: gsap }) => {
+      if (cancelled) return;
 
-      gsap.to(orb, {
-        opacity: 1,
-        duration: 2.5,
-        delay: i * 0.4,
-        ease: "power2.out",
-      });
+      orbs.forEach((orb, i) => {
+        gsap.set(orb, { opacity: 0 });
 
-      gsap.to(orb, {
-        x: `random(-150, 150)`,
-        y: `random(-100, 100)`,
-        duration: `random(6, 10)`,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-        delay: i * 0.5,
-      });
+        gsap.to(orb, {
+          opacity: 1,
+          duration: 2.5,
+          delay: i * 0.4,
+          ease: "power2.out",
+        });
 
-      gsap.to(orb, {
-        scale: `random(0.5, 1.5)`,
-        duration: `random(5, 8)`,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-        delay: i * 0.7,
+        gsap.to(orb, {
+          x: `random(-150, 150)`,
+          y: `random(-100, 100)`,
+          duration: `random(6, 10)`,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: i * 0.5,
+        });
+
+        gsap.to(orb, {
+          scale: `random(0.5, 1.5)`,
+          duration: `random(5, 8)`,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          delay: i * 0.7,
+        });
       });
     });
 
     return () => {
-      orbs.forEach((orb) => gsap.killTweensOf(orb));
+      cancelled = true;
+      // Best-effort cleanup — only runs if gsap finished loading.
+      import("gsap").then(({ default: gsap }) => {
+        orbs.forEach((orb) => gsap.killTweensOf(orb));
+      });
     };
   }, []);
 
@@ -60,6 +70,7 @@ export function HeroBackground() {
           borderRadius: "50%",
           background: "radial-gradient(circle, rgba(187,148,41,0.18) 0%, rgba(187,148,41,0.05) 40%, transparent 70%)",
           filter: "blur(40px)",
+          opacity: 0,
         }}
       />
 
@@ -75,6 +86,7 @@ export function HeroBackground() {
           borderRadius: "50%",
           background: "radial-gradient(circle, rgba(187,148,41,0.12) 0%, rgba(187,148,41,0.03) 50%, transparent 70%)",
           filter: "blur(35px)",
+          opacity: 0,
         }}
       />
 
@@ -90,6 +102,7 @@ export function HeroBackground() {
           borderRadius: "50%",
           background: "radial-gradient(circle, rgba(187,148,41,0.10) 0%, transparent 60%)",
           filter: "blur(45px)",
+          opacity: 0,
         }}
       />
 
@@ -105,6 +118,7 @@ export function HeroBackground() {
           borderRadius: "50%",
           background: "radial-gradient(circle, rgba(187,148,41,0.15) 0%, transparent 60%)",
           filter: "blur(30px)",
+          opacity: 0,
         }}
       />
 

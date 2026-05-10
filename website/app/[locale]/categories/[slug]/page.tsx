@@ -10,11 +10,16 @@ import { getBrands } from "@/hooks/brands.server";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { JsonLd } from "@/lib/json-ld";
 import { resolveCategoryRedirect } from "@/lib/slug-redirects";
+import { generateCategorySlugParams } from "@/lib/static-params";
 
 import { CategoryProductsView } from "./_components/category-products-view";
 
 interface PageProps {
   params: Promise<{ locale: Locale; slug: string }>;
+}
+
+export async function generateStaticParams() {
+  return generateCategorySlugParams();
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

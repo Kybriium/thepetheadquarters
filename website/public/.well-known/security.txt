@@ -1,0 +1,8 @@
+# Security policy for thepetheadquarters.co.uk
+# Conforms to RFC 9116 — security.txt
+
+Contact: mailto:hello@thepetheadquarters.co.uk
+Expires: 2027-05-10T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://thepetheadquarters.co.uk/.well-known/security.txt
+Policy: https://thepetheadquarters.co.uk/legal/terms

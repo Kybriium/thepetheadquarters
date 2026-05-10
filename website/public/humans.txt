@@ -1,0 +1,11 @@
+/* TEAM */
+The Pet Headquarters
+Site: thepetheadquarters.co.uk
+Contact: hello@thepetheadquarters.co.uk
+Location: United Kingdom
+
+/* SITE */
+Last update: 2026-05-10
+Language: English
+Doctype: HTML5
+Components: Next.js, React, TypeScript, Tailwind CSS, Django REST Framework

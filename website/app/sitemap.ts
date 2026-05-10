@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { locales, defaultLocale, siteUrl } from "@/i18n/config";
+import { siteUrl, buildLanguageAlternates } from "@/i18n/config";
 import { endpoints } from "@/config/endpoints";
 
 // Tell Next to revalidate the sitemap every hour. Sitemaps don't need
@@ -21,17 +21,6 @@ interface SitemapPayload {
   };
 }
 
-function buildAlternates(pathname: string) {
-  const languages: Record<string, string> = {};
-  for (const locale of locales) {
-    languages[locale] =
-      locale === defaultLocale
-        ? `${siteUrl}${pathname}`
-        : `${siteUrl}/${locale}${pathname}`;
-  }
-  languages["x-default"] = `${siteUrl}${pathname}`;
-  return { languages };
-}
 
 async function fetchSlugs(): Promise<SitemapPayload["data"]> {
   try {
@@ -57,12 +46,13 @@ function entry(
   priority: number,
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"],
 ): MetadataRoute.Sitemap[number] {
+  const languages = buildLanguageAlternates(pathname);
   return {
     url: `${siteUrl}${pathname}`,
     lastModified,
     changeFrequency,
     priority,
-    alternates: buildAlternates(pathname),
+    ...(languages && { alternates: { languages } }),
   };
 }
 

@@ -17,6 +17,7 @@ import { getProductAttributes } from "@/hooks/attributes.server";
 import { JsonLd } from "@/lib/json-ld";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { resolveProductRedirect } from "@/lib/slug-redirects";
+import { generateProductSlugParams } from "@/lib/static-params";
 
 import { ImageGallery } from "./_components/image-gallery";
 import { ProductInfo } from "./_components/product-info";
@@ -26,6 +27,10 @@ import { RelatedProducts } from "./_components/related-products";
 
 interface PageProps {
   params: Promise<{ locale: Locale; slug: string }>;
+}
+
+export async function generateStaticParams() {
+  return generateProductSlugParams();
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

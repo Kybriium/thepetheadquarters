@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Montserrat } from "next/font/google";
 
-import { isValidLocale, locales, siteUrl, defaultLocale } from "@/i18n/config";
+import { isValidLocale, locales, siteUrl, buildLanguageAlternates } from "@/i18n/config";
 import type { Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { Providers, ToastContainer } from "@/components/providers";
@@ -13,17 +13,21 @@ import { Footer } from "@/components/layout/footer";
 
 import "../globals.css";
 
+// Cormorant is used only for headings — keep regular + medium weights.
+// Italic is synthesized when needed (admin only); shipping the italic file
+// would cost an extra ~30KB across pages that never use it.
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  style: ["normal", "italic"],
+  weight: ["400", "500"],
   variable: "--font-cormorant",
   display: "swap",
 });
 
+// Montserrat carries body + UI text. 400/500/600/700 cover every actual
+// usage in the codebase; 300 was loaded but unreferenced.
 const montserrat = Montserrat({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-montserrat",
   display: "swap",
 });
@@ -47,10 +51,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
 
-  const languages: Record<string, string> = { "x-default": siteUrl };
-  for (const loc of locales) {
-    languages[loc] = loc === defaultLocale ? siteUrl : `${siteUrl}/${loc}`;
-  }
+  const languages = buildLanguageAlternates("/");
 
   return {
     metadataBase: new URL(siteUrl),
@@ -115,7 +116,7 @@ export async function generateMetadata({
     },
     alternates: {
       canonical: siteUrl,
-      languages,
+      ...(languages && { languages }),
     },
   };
 }
@@ -140,24 +141,17 @@ export default async function LocaleLayout({
   const common = await getDictionary(locale as Locale, "common");
 
   return (
-    <html lang={locale} className={`light page-loading ${cormorant.variable} ${montserrat.variable}`}>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `document.documentElement.className=document.documentElement.className.replace('page-loading','page-loading');`,
-          }}
-        />
-      </head>
+    <html lang={locale} className={`page-loading ${cormorant.variable} ${montserrat.variable}`}>
       <body>
-          <PageLoader />
-          <Providers>
-            <Header dict={common.nav} />
-            {children}
-            <Footer dict={common.footer} navDict={common.nav} />
-          </Providers>
-          <ToastContainer />
-          <ScrollAnimations />
-        </body>
+        <PageLoader />
+        <Providers>
+          <Header dict={common.nav} />
+          {children}
+          <Footer dict={common.footer} navDict={common.nav} />
+        </Providers>
+        <ToastContainer />
+        <ScrollAnimations />
+      </body>
     </html>
   );
 }

@@ -61,6 +61,7 @@ export function BrandsSection({ dict, brands }: BrandsSectionProps) {
                   alt={brand.name}
                   width={200}
                   height={80}
+                  sizes="(max-width: 640px) 32px, 48px"
                   className="h-8 w-auto object-contain sm:h-12"
                   style={{ filter: "brightness(0)" }}
                 />

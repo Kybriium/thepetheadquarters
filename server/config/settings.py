@@ -339,7 +339,15 @@ AWS_S3_ADDRESSING_STYLE = config("AWS_S3_ADDRESSING_STYLE", default="virtual")
 # accidentally-shared links expire fast.
 AWS_S3_SIGNED_URL_TTL_SECONDS = int(config("AWS_S3_SIGNED_URL_TTL_SECONDS", default=600))
 
-PRIVATE_STORAGE_ENABLED = bool(AWS_STORAGE_BUCKET_NAME and AWS_ACCESS_KEY_ID)
+# True when ANY cloud private-storage backend is configured. The storage
+# helper picks S3 first, then Cloudinary's authenticated delivery, then
+# falls back to local disk. We treat Cloudinary as a valid prod backend
+# because it supports `type=authenticated` private uploads with signed
+# URLs — useful for stacks that already pay for Cloudinary for product
+# images and don't want a second object-storage vendor for receipts.
+PRIVATE_STORAGE_ENABLED = bool(
+    (AWS_STORAGE_BUCKET_NAME and AWS_ACCESS_KEY_ID) or CLOUDINARY_URL
+)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

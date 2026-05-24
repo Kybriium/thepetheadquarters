@@ -49,6 +49,7 @@ LOCAL_APPS = [
     "apps.reviews",
     "apps.analytics",
     "apps.audit",
+    "apps.integrations",
     "apps.admin_panel",
 ]
 
@@ -186,8 +187,20 @@ SHIPPING_FREE_THRESHOLD_PENCE = config("SHIPPING_FREE_THRESHOLD_PENCE", default=
 # ---------------------------------------------------------------------------
 VAT_RATE = config("VAT_RATE", default=0.20, cast=float)
 PRICES_INCLUDE_VAT = config("PRICES_INCLUDE_VAT", default=True, cast=bool)
-VAT_REGISTERED = config("VAT_REGISTERED", default=True, cast=bool)
+# Default to False — charging VAT-inclusive prices without registering
+# with HMRC is illegal. Flip to True only after you have a VAT number.
+VAT_REGISTERED = config("VAT_REGISTERED", default=False, cast=bool)
 COMPANY_VAT_NUMBER = config("COMPANY_VAT_NUMBER", default="")
+
+# ---------------------------------------------------------------------------
+# Company identity — required on every business communication
+# (Companies Act 2006 s.82). Surfaced publicly via /api/v1/site/legal/.
+# ---------------------------------------------------------------------------
+COMPANY_LEGAL_NAME = config("COMPANY_LEGAL_NAME", default="")
+COMPANY_NUMBER = config("COMPANY_NUMBER", default="")
+COMPANY_REGISTERED_OFFICE = config("COMPANY_REGISTERED_OFFICE", default="")
+COMPANY_INCORPORATION = config("COMPANY_INCORPORATION", default="England and Wales")
+COMPANY_TRADING_NAME = config("COMPANY_TRADING_NAME", default="The Pet Headquarters")
 
 # ---------------------------------------------------------------------------
 # Analytics — first-party, cookieless, GDPR-friendly

@@ -78,6 +78,11 @@ from apps.admin_panel.views.analytics import (
     AdminAnalyticsVisitorListView,
 )
 from apps.admin_panel.views.upload import AdminImageUploadView, AdminUploadInfoView
+from apps.admin_panel.views.integrations import (
+    AdminTelegramConfigView,
+    AdminTelegramDiscoverView,
+    AdminTelegramTestView,
+)
 from apps.admin_panel.views.customizations import (
     AdminCustomizationTemplateDetailView,
     AdminCustomizationTemplateListView,
@@ -185,6 +190,11 @@ urlpatterns = [
     # Uploads
     path("upload/info/", AdminUploadInfoView.as_view()),
     path("upload/image/", AdminImageUploadView.as_view()),
+
+    # Integrations (Telegram)
+    path("integrations/telegram/", AdminTelegramConfigView.as_view()),
+    path("integrations/telegram/discover/", AdminTelegramDiscoverView.as_view()),
+    path("integrations/telegram/test/", AdminTelegramTestView.as_view()),
 
     # Customizations
     path("customizations/templates/", AdminCustomizationTemplateListView.as_view()),

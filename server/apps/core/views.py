@@ -6,6 +6,7 @@ products, categories, and brands so the frontend can build the sitemap and
 resolve old slugs without making N round-trips.
 """
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import AllowAny
@@ -93,6 +94,33 @@ class _SlugRedirectBaseView(APIView):
             return error_response("common.not_found", status_code=404)
 
         return success_response(data={"slug": target.slug})
+
+
+class SiteLegalView(APIView):
+    """
+    Public business-identity info — read on every page so the site can
+    satisfy Companies Act 2006 s.82 (Ltd companies must display their
+    registered name, number, registered office and country of incorporation
+    on every business communication, including the website itself and any
+    receipts/invoices).
+
+    Sourced from env vars so production deployments can override without a
+    code change. VAT fields are only populated when the business is
+    registered — frontend should hide the VAT block otherwise.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return success_response(data={
+            "legal_name": settings.COMPANY_LEGAL_NAME,
+            "trading_name": settings.COMPANY_TRADING_NAME,
+            "company_number": settings.COMPANY_NUMBER,
+            "registered_office": settings.COMPANY_REGISTERED_OFFICE,
+            "incorporation": settings.COMPANY_INCORPORATION,
+            "vat_registered": settings.VAT_REGISTERED,
+            "vat_number": settings.COMPANY_VAT_NUMBER,
+        })
 
 
 class ProductSlugRedirectView(_SlugRedirectBaseView):

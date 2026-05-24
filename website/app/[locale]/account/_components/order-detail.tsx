@@ -2,26 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { endpoints } from "@/config/endpoints";
+import { PrintReceiptButton, Receipt } from "@/components/orders/receipt";
 import type { Order } from "@/types/order";
 
 interface OrderDetailProps {
   orderNumber: string;
-}
-
-function formatPrice(pence: number): string {
-  return `£${(pence / 100).toFixed(2)}`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -74,24 +62,17 @@ export function OrderDetail({ orderNumber }: OrderDetailProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        href="/account/orders"
-        className="inline-flex w-fit items-center gap-2 transition-colors duration-200 hover:text-[var(--gold)]"
-        style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)", letterSpacing: "var(--tracking-wide)", textTransform: "uppercase" }}
-      >
-        <ArrowLeft size={14} />
-        Back to orders
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 style={{ fontFamily: "var(--font-cormorant)", fontSize: "var(--text-3xl)", fontWeight: "var(--weight-regular)", color: "var(--white)" }}>
-            {order.order_number}
-          </h1>
-          <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: "var(--white-faint)" }}>
-            Placed on {formatDate(order.created_at)}
-          </p>
-        </div>
+      <div className="print-hide flex items-center justify-between gap-4">
+        <Link
+          href="/account/orders"
+          className="inline-flex items-center gap-2 transition-colors duration-200 hover:text-[var(--gold)]"
+          style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)", letterSpacing: "var(--tracking-wide)", textTransform: "uppercase" }}
+        >
+          <ArrowLeft size={14} />
+          Back to orders
+        </Link>
+        {/* Status badge — surfaces shipped/delivered/cancelled states which
+            the receipt header only renders as "Paid". */}
         <span
           className="rounded-full px-3 py-1"
           style={{
@@ -108,88 +89,10 @@ export function OrderDetail({ orderNumber }: OrderDetailProps) {
         </span>
       </div>
 
-      {/* Items */}
-      <div className="rounded-lg" style={{ background: "var(--bg-secondary)", border: "1px solid var(--bg-border)", padding: "var(--space-6)" }}>
-        <h2 className="mb-4" style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)", color: "var(--white-faint)", letterSpacing: "var(--tracking-wide)", textTransform: "uppercase" }}>
-          Items ({order.items.length})
-        </h2>
-        <div className="flex flex-col gap-4">
-          {order.items.map((item, i) => (
-            <div
-              key={item.id}
-              className="flex gap-4"
-              style={{
-                paddingBottom: i < order.items.length - 1 ? "var(--space-4)" : 0,
-                borderBottom: i < order.items.length - 1 ? "1px solid var(--bg-border)" : "none",
-              }}
-            >
-              {item.image_url && (
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md" style={{ background: "var(--bg-tertiary)" }}>
-                  <Image src={item.image_url} alt={item.product_name} fill sizes="64px" className="object-cover" />
-                </div>
-              )}
-              <div className="flex-1">
-                <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--white)" }}>
-                  {item.product_name}
-                </p>
-                {item.variant_option_label && (
-                  <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)" }}>
-                    {item.variant_option_label}
-                  </p>
-                )}
-                <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)" }}>
-                  Qty: {item.quantity} × {formatPrice(item.unit_price)}
-                </p>
-              </div>
-              <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--white)" }}>
-                {formatPrice(item.line_total)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <Receipt order={order} />
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Shipping address */}
-        <div className="rounded-lg" style={{ background: "var(--bg-secondary)", border: "1px solid var(--bg-border)", padding: "var(--space-5)" }}>
-          <h2 className="mb-3" style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)", color: "var(--white-faint)", letterSpacing: "var(--tracking-wide)", textTransform: "uppercase" }}>
-            Shipping Address
-          </h2>
-          <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-medium)", color: "var(--white)" }}>
-            {order.shipping_full_name}
-          </p>
-          <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: "var(--white-faint)", lineHeight: "var(--leading-relaxed)" }}>
-            {order.shipping_address_line_1}
-            {order.shipping_address_line_2 && `, ${order.shipping_address_line_2}`}
-            <br />
-            {order.shipping_city}{order.shipping_county ? `, ${order.shipping_county}` : ""} {order.shipping_postcode}
-          </p>
-        </div>
-
-        {/* Payment summary */}
-        <div className="rounded-lg" style={{ background: "var(--bg-secondary)", border: "1px solid var(--bg-border)", padding: "var(--space-5)" }}>
-          <h2 className="mb-3" style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", fontWeight: "var(--weight-medium)", color: "var(--white-faint)", letterSpacing: "var(--tracking-wide)", textTransform: "uppercase" }}>
-            Payment
-          </h2>
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between">
-              <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: "var(--white-faint)" }}>Subtotal</span>
-              <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: "var(--white)" }}>{formatPrice(order.subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: "var(--white-faint)" }}>Shipping</span>
-              <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: order.shipping_cost === 0 ? "var(--success)" : "var(--white)" }}>
-                {order.shipping_cost === 0 ? "FREE" : formatPrice(order.shipping_cost)}
-              </span>
-            </div>
-            <div className="flex justify-between" style={{ paddingTop: "var(--space-2)", borderTop: "1px solid var(--bg-border)" }}>
-              <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--white)" }}>Total</span>
-              <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-base)", fontWeight: "var(--weight-bold)", color: "var(--gold-dark)" }}>
-                {formatPrice(order.total)}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div className="print-hide flex justify-center">
+        <PrintReceiptButton />
       </div>
     </div>
   );

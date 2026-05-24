@@ -4,6 +4,9 @@ from rest_framework.throttling import AnonRateThrottle
 
 from apps.core.responses import created_response, validation_error_response
 
+from apps.integrations.models import NotificationEvent
+from apps.integrations.services import notify
+
 from .models import ContactMessage
 from .serializers import ContactSerializer
 
@@ -32,5 +35,13 @@ class ContactView(APIView):
             subject=data.get("subject", ""),
             message=data["message"],
         )
+
+        # Fire-and-forget — never blocks the response.
+        notify(NotificationEvent.CONTACT_MESSAGE, {
+            "name": data["name"],
+            "email": data["email"],
+            "subject": data.get("subject", ""),
+            "message": data["message"],
+        })
 
         return created_response({"code": "contact.sent"})

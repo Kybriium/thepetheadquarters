@@ -36,6 +36,9 @@ export interface Order {
   shipping_cost: number;
   discount_amount: number;
   promotion_code: string;
+  vat_amount: number;
+  /** VAT rate as a decimal string from Django (e.g. "0.2000"). */
+  vat_rate: string;
   total: number;
   created_at: string;
   paid_at: string | null;

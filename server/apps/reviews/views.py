@@ -116,6 +116,21 @@ class ReviewListCreateView(APIView):
             body=data["body"],
         )
 
+        # Notify staff in Telegram (fire-and-forget). Imported lazily so the
+        # reviews app doesn't depend on apps.integrations at import time.
+        try:
+            from apps.integrations.models import NotificationEvent
+            from apps.integrations.services import notify
+            translation = product.translations.filter(language="en").first()
+            notify(NotificationEvent.REVIEW_NEW, {
+                "product_name": translation.name if translation else str(product.pk),
+                "reviewer": (request.user.first_name or request.user.email) if request.user else "Anonymous",
+                "rating": data["rating"],
+                "body": data["body"],
+            })
+        except Exception:
+            pass
+
         return created_response(
             data=ReviewSerializer(review, context={"request": request}).data
         )

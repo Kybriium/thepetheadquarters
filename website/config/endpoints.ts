@@ -21,6 +21,9 @@ export const endpoints = {
     redirectCategory: (slug: string) => `${API_BASE}/redirect/categories/${slug}/`,
     redirectBrand: (slug: string) => `${API_BASE}/redirect/brands/${slug}/`,
   },
+  site: {
+    legal: `${API_BASE}/site/legal/`,
+  },
   attributes: {
     list: `${API_BASE}/attributes/`,
     byProduct: (productId: string) => `${API_BASE}/attributes/product/${productId}/`,
@@ -173,6 +176,11 @@ export const endpoints = {
     upload: {
       image: `${API_BASE}/admin/upload/image/`,
       info: `${API_BASE}/admin/upload/info/`,
+    },
+    integrations: {
+      telegram: `${API_BASE}/admin/integrations/telegram/`,
+      telegramDiscover: `${API_BASE}/admin/integrations/telegram/discover/`,
+      telegramTest: `${API_BASE}/admin/integrations/telegram/test/`,
     },
     customizations: {
       templates: `${API_BASE}/admin/customizations/templates/`,

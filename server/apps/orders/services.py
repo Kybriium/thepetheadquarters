@@ -391,13 +391,20 @@ def fulfill_order(session):
     except (KeyError, TypeError):
         payment_intent_id = ""
 
-    # VAT calculation (prices include VAT — extract VAT portion from total)
-    vat_rate = Decimal(str(getattr(settings, "VAT_RATE", 0.20)))
-    if getattr(settings, "PRICES_INCLUDE_VAT", True):
-        # vat = total × (rate / (1 + rate))
-        vat_amount = int(round(total * float(vat_rate / (1 + vat_rate))))
+    # VAT calculation — only runs if the business is actually VAT-registered.
+    # Charging VAT before registration is illegal under HMRC rules; the flag
+    # exists so flipping it on in env is the only action needed when the
+    # business crosses the registration threshold (currently £90k turnover).
+    if getattr(settings, "VAT_REGISTERED", False):
+        vat_rate = Decimal(str(getattr(settings, "VAT_RATE", 0.20)))
+        if getattr(settings, "PRICES_INCLUDE_VAT", True):
+            # vat = total × (rate / (1 + rate))
+            vat_amount = int(round(total * float(vat_rate / (1 + vat_rate))))
+        else:
+            vat_amount = int(round(total * float(vat_rate)))
     else:
-        vat_amount = int(round(total * float(vat_rate)))
+        vat_rate = Decimal("0")
+        vat_amount = 0
 
     from apps.procurement.services import consume_fifo
 
@@ -432,12 +439,15 @@ def fulfill_order(session):
         for item_data in items_data:
             fulfillment_type = item_data.get("fulfillment_type", "self")
 
-            # Per-item VAT (proportional to line total)
+            # Per-item VAT (proportional to line total) — only when registered.
             item_line_total = item_data["line_total"]
-            if getattr(settings, "PRICES_INCLUDE_VAT", True):
-                item_vat = int(round(item_line_total * float(vat_rate / (1 + vat_rate))))
+            if getattr(settings, "VAT_REGISTERED", False):
+                if getattr(settings, "PRICES_INCLUDE_VAT", True):
+                    item_vat = int(round(item_line_total * float(vat_rate / (1 + vat_rate))))
+                else:
+                    item_vat = int(round(item_line_total * float(vat_rate)))
             else:
-                item_vat = int(round(item_line_total * float(vat_rate)))
+                item_vat = 0
 
             order_item = OrderItem.objects.create(
                 order=order,
@@ -491,6 +501,26 @@ def fulfill_order(session):
                 order_item.cogs_amount = cogs
                 order_item.save(update_fields=["cogs_amount"])
 
+                # Low-stock alert — check the post-decrement value against
+                # the configured threshold. Lazy import + try/except so the
+                # order flow never fails because of integrations.
+                try:
+                    from apps.integrations.models import NotificationEvent, TelegramConfig
+                    from apps.integrations.services import notify as integrations_notify
+
+                    tg = TelegramConfig.objects.first()
+                    threshold = tg.low_stock_threshold if tg else 5
+                    remaining = max(0, variant.stock_quantity - item_data["quantity"])
+                    if remaining <= threshold:
+                        integrations_notify(NotificationEvent.LOW_STOCK, {
+                            "product_name": item_data["product_name"],
+                            "variant_label": item_data.get("option_label", ""),
+                            "sku": item_data["variant_sku"],
+                            "remaining": remaining,
+                        })
+                except Exception:
+                    pass
+
         # Record promotion redemption (idempotent on (promotion, order))
         if promotion_id and discount_amount > 0:
             from apps.promotions.services import redeem as redeem_promotion
@@ -510,6 +540,25 @@ def fulfill_order(session):
 
     logger.info("Order %s created successfully.", order.order_number)
     send_order_confirmation_email(order)
+
+    # Notify admin via configured integrations (Telegram). Fire-and-forget;
+    # never blocks order completion. Lazy import keeps the orders app
+    # independent of apps.integrations at import time.
+    try:
+        from apps.integrations.models import NotificationEvent
+        from apps.integrations.services import notify as integrations_notify
+
+        integrations_notify(NotificationEvent.ORDER_PAID, {
+            "order_number": order.order_number,
+            "total_pence": order.total,
+            "customer_name": order.shipping_full_name,
+            "email": order.email,
+            "item_count": sum(i["quantity"] for i in items_data),
+            "shipping_city": order.shipping_city,
+            "shipping_postcode": order.shipping_postcode,
+        })
+    except Exception:
+        logger.exception("integrations.notify for order %s failed", order.order_number)
 
     return order
 

@@ -60,7 +60,8 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             "id", "order_number", "status", "email",
-            "subtotal", "shipping_cost", "discount_amount", "promotion_code", "total",
+            "subtotal", "shipping_cost", "discount_amount", "promotion_code",
+            "vat_amount", "vat_rate", "total",
             "created_at", "paid_at",
             "shipping_full_name", "shipping_address_line_1",
             "shipping_address_line_2", "shipping_city",

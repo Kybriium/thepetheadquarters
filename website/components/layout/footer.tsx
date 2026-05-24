@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
+import { useSiteLegal } from "@/hooks/use-site-legal";
 
 interface FooterProps {
   dict: {
@@ -26,6 +27,10 @@ interface FooterProps {
 
 export function Footer({ dict, navDict }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  // Companies Act 2006 s.82 — Ltd companies must publish their registered
+  // identity on the website. Surfaced once via the public /site/legal/
+  // endpoint and rendered in the footer (visible on every page).
+  const legal = useSiteLegal();
 
   const columns = [
     {
@@ -156,19 +161,51 @@ export function Footer({ dict, navDict }: FooterProps) {
 
         {/* Bottom */}
         <div
-          className="mt-16 flex flex-col items-center justify-between gap-4 pt-8 sm:flex-row"
+          className="mt-16 flex flex-col gap-4 pt-8"
           style={{ borderTop: "1px solid var(--bg-border)" }}
         >
-          <span
-            style={{
-              fontFamily: "var(--font-montserrat)",
-              fontSize: "var(--text-xs)",
-              color: "var(--white-faint)",
-            }}
-          >
-            &copy; {currentYear} The Pet Headquarters. {dict.copyright}
-          </span>
-          <div style={{ width: 40, height: 1, background: "var(--gold)" }} />
+          {/* Companies Act 2006 s.82 disclosure */}
+          {legal?.legal_name && (
+            <p
+              style={{
+                fontFamily: "var(--font-montserrat)",
+                fontSize: "var(--text-xs)",
+                color: "var(--white-faint)",
+                lineHeight: "var(--leading-relaxed)",
+              }}
+            >
+              {legal.trading_name && legal.trading_name !== legal.legal_name && (
+                <>{legal.trading_name} is a trading name of </>
+              )}
+              <strong style={{ color: "var(--white-dim)" }}>{legal.legal_name}</strong>
+              {legal.company_number && (
+                <>
+                  , a company registered in {legal.incorporation || "England and Wales"}{" "}
+                  (no. {legal.company_number})
+                </>
+              )}
+              {legal.registered_office && (
+                <>. Registered office: {legal.registered_office}</>
+              )}
+              {legal.vat_registered && legal.vat_number && (
+                <> · VAT no. {legal.vat_number}</>
+              )}
+              .
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-4">
+            <span
+              style={{
+                fontFamily: "var(--font-montserrat)",
+                fontSize: "var(--text-xs)",
+                color: "var(--white-faint)",
+              }}
+            >
+              &copy; {currentYear} {legal?.trading_name || "The Pet Headquarters"}. {dict.copyright}
+            </span>
+            <div style={{ width: 40, height: 1, background: "var(--gold)" }} />
+          </div>
         </div>
       </div>
     </footer>

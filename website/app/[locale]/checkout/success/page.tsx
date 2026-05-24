@@ -12,8 +12,8 @@ export default async function CheckoutSuccessPage({ params, searchParams }: { pa
   const { session_id } = await searchParams;
 
   return (
-    <section className="flex min-h-[60vh] items-center justify-center py-16" style={{ background: "var(--bg-primary)" }}>
-      <div className="w-full max-w-lg px-4 text-center sm:px-6">
+    <section className="py-12 md:py-16" style={{ background: "var(--bg-primary)" }}>
+      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6">
         <SuccessContent dict={dict} sessionId={session_id || ""} />
       </div>
     </section>

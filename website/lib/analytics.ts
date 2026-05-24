@@ -35,9 +35,13 @@ interface QueuedEvent {
   title?: string;
 }
 
+// Intentionally obscure path — `/analytics/track/` was blocked by Brave's
+// Shields and most ad-block filter lists (URL-based pattern match against
+// the words "analytics" / "track"). The backend exposes the same view at
+// the short `_a/` path so privacy browsers see our first-party events.
 const ENDPOINT =
   (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1") +
-  "/analytics/track/";
+  "/_a/";
 
 const FLUSH_DELAY_MS = 2000;
 const MAX_BATCH_SIZE = 20;

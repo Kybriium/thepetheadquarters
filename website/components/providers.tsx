@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { CookieNotice } from "@/components/cookie-notice";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -31,6 +32,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
           </Suspense>
           {children}
           <CookieNotice />
+          {/* Sequenced popups: the install prompt polls localStorage and
+              only appears once the cookie notice has been dismissed, so
+              visitors don't get two banners stacked at once on first load. */}
+          <PwaInstallPrompt />
         </CartProvider>
       </AuthProvider>
     </QueryClientProvider>

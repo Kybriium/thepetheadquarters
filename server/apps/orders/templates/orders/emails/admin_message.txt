@@ -1,0 +1,15 @@
+{{ site_name }} — a message about your order
+
+Hi{% if customer_first_name %} {{ customer_first_name }}{% endif %},
+
+{{ body }}
+
+Order reference: {{ order.order_number }}
+View your order: {{ order_url }}
+
+Reply to this email if you'd like to respond — it goes straight to {{ reply_to }}.
+
+—
+{{ site_name }} is a trading name of CHERYA HOLDINGS LIMITED, a company
+registered in England and Wales (no. 17203315).
+Registered office: 167-169 Great Portland Street, London, W1W 5PF.

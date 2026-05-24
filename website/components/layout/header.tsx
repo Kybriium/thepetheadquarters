@@ -3,11 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, ShoppingCart, Menu, X, ArrowRight, UserCircle, LogOut, Shield } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { Search, ShoppingCart, X, ArrowRight, UserCircle, LogOut, Shield } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { CartPopup } from "./cart-popup";
+import { SearchOverlay } from "./search-overlay";
+import { NavMenuTab, NavMenuPanel, type NavMenuKey } from "./nav-mega-menu";
 
 interface HeaderProps {
   dict: {
@@ -22,21 +24,33 @@ interface HeaderProps {
   };
 }
 
-const navLinks = [
+/**
+ * Nav config — flat links by default, but `dropdown` opt-in turns a
+ * tab into a click-to-open menu trigger (see <NavMenuTab/>). The
+ * dropdown panel itself renders once below the nav row, full width,
+ * and swaps content based on which tab is active.
+ */
+const navLinks: ReadonlyArray<{
+  key: "products" | "categories" | "brands" | "about" | "contact";
+  href: string;
+  dropdown?: NavMenuKey;
+}> = [
   { key: "products", href: "/products" },
-  { key: "categories", href: "/categories" },
-  { key: "brands", href: "/brands" },
+  { key: "categories", href: "/categories", dropdown: "categories" },
+  { key: "brands", href: "/brands", dropdown: "brands" },
   { key: "about", href: "/about" },
   { key: "contact", href: "/contact" },
-] as const;
+];
 
 export function Header({ dict }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
-  const router = useRouter();
+  // Single source of truth for which nav dropdown is open. Replaces
+  // the previous per-menu hover state, which let two panels appear at
+  // once on a fast cursor sweep.
+  const [activeMenu, setActiveMenu] = useState<NavMenuKey | null>(null);
   const pathname = usePathname();
   const { totalItems, drawerOpen } = useCart();
   const { user, isAuthenticated, isStaff, logout } = useAuth();
@@ -81,10 +95,13 @@ export function Header({ dict }: HeaderProps) {
     return () => document.removeEventListener("mousedown", onClick);
   }, [userMenuOpen]);
 
-  // Close popup on navigation
+  // Close popups + dropdowns on navigation so menus don't linger
+  // after a click. activeMenu is included here so clicking "View all"
+  // (or any link inside the panel) collapses the menu cleanly.
   useEffect(() => {
     setCartOpen(false);
     setUserMenuOpen(false);
+    setActiveMenu(null);
   }, [pathname]);
 
   // Lock body scroll when mobile menu is open
@@ -96,15 +113,6 @@ export function Header({ dict }: HeaderProps) {
     }
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchOpen(false);
-      setSearchQuery("");
-    }
-  }
 
   return (
     <>
@@ -141,10 +149,32 @@ export function Header({ dict }: HeaderProps) {
             </span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden items-center gap-1 lg:flex">
+          {/* Desktop nav — dropdown-enabled tabs are buttons that
+              toggle the single shared `activeMenu`. Flat links stay
+              as plain anchors. */}
+          <nav className="hidden items-center gap-1 lg:flex" data-nav-menu="row">
             {navLinks.map((link) => {
               const isActive = pathname === link.href || pathname.startsWith(link.href + "/");
+              if (link.dropdown) {
+                const dropdownKey = link.dropdown;
+                return (
+                  // Wrap each tab with data-nav-menu="tab" so the panel's
+                  // outside-click handler can distinguish clicks on tabs
+                  // (toggle is handled by onClick) from real outside clicks.
+                  <div key={link.key} data-nav-menu="tab">
+                    <NavMenuTab
+                      href={link.href}
+                      label={dict[link.key]}
+                      menuKey={dropdownKey}
+                      isActive={isActive}
+                      isOpen={activeMenu === dropdownKey}
+                      onToggle={() =>
+                        setActiveMenu((cur) => (cur === dropdownKey ? null : dropdownKey))
+                      }
+                    />
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={link.key}
@@ -174,6 +204,7 @@ export function Header({ dict }: HeaderProps) {
           <div className="flex items-center gap-1">
             <button
               onClick={() => { setSearchOpen(!searchOpen); setMobileOpen(false); }}
+              aria-label={searchOpen ? "Close search" : "Open search"}
               className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 hover:bg-[rgba(187,148,41,0.1)] hover:text-[var(--gold)]"
               style={{ color: searchOpen ? "var(--gold)" : "var(--white-dim)" }}
             >
@@ -183,6 +214,7 @@ export function Header({ dict }: HeaderProps) {
             <div ref={cartRef} className="relative">
             <button
               onClick={() => { setCartOpen(!cartOpen); setSearchOpen(false); setMobileOpen(false); }}
+              aria-label={totalItems > 0 ? `Open cart (${totalItems} items)` : "Open cart"}
               className="relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 hover:bg-[rgba(187,148,41,0.1)] hover:text-[var(--gold)]"
               style={{ color: cartOpen ? "var(--gold)" : "var(--white-dim)" }}
             >
@@ -212,6 +244,7 @@ export function Header({ dict }: HeaderProps) {
                 <>
                   <button
                     onClick={() => { setUserMenuOpen(!userMenuOpen); setSearchOpen(false); setCartOpen(false); setMobileOpen(false); }}
+                    aria-label="Open account menu"
                     className="relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 hover:bg-[rgba(187,148,41,0.1)] hover:text-[var(--gold)]"
                     style={{ color: userMenuOpen ? "var(--gold)" : "var(--white-dim)" }}
                   >
@@ -270,6 +303,7 @@ export function Header({ dict }: HeaderProps) {
               ) : (
                 <Link
                   href="/account/login"
+                  aria-label="Sign in"
                   className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 hover:bg-[rgba(187,148,41,0.1)] hover:text-[var(--gold)]"
                   style={{ color: "var(--white-dim)" }}
                 >
@@ -280,6 +314,7 @@ export function Header({ dict }: HeaderProps) {
 
             <button
               onClick={() => { setMobileOpen(!mobileOpen); setSearchOpen(false); }}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
               className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 hover:bg-[rgba(187,148,41,0.1)] lg:hidden"
               style={{ color: mobileOpen ? "var(--gold)" : "var(--white-dim)" }}
             >
@@ -314,51 +349,16 @@ export function Header({ dict }: HeaderProps) {
           </div>
         </div>
 
-        {/* Search overlay */}
-        <div
-          className="overflow-hidden transition-all duration-400"
-          style={{
-            maxHeight: searchOpen ? 80 : 0,
-            opacity: searchOpen ? 1 : 0,
-            borderTop: searchOpen ? "1px solid var(--bg-border)" : "none",
-            background: "var(--bg-secondary)",
-          }}
-        >
-          <form onSubmit={handleSearch} className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3 sm:px-6">
-            <div className="relative flex-1">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: "var(--white-faint)" }}
-              />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={dict.search}
-                autoFocus={searchOpen}
-                className="w-full outline-none"
-                style={{
-                  background: "var(--bg-tertiary)",
-                  border: "1px solid var(--bg-border)",
-                  color: "var(--white)",
-                  fontFamily: "var(--font-montserrat)",
-                  fontSize: "var(--text-sm)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "var(--space-2) var(--space-3) var(--space-2) var(--space-10)",
-                }}
-              />
-            </div>
-            <button
-              type="submit"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:bg-[var(--gold)] hover:text-[var(--black)]"
-              style={{ background: "var(--bg-tertiary)", color: "var(--gold)", border: "1px solid var(--bg-border)" }}
-            >
-              <ArrowRight size={16} />
-            </button>
-          </form>
-        </div>
+        {/* Single full-width dropdown rendered below the nav row.
+            Pinned to the header so it always anchors flush left/right
+            — no sideways drift no matter which tab opens it. Content
+            swaps based on which menu is active. */}
+        <NavMenuPanel activeKey={activeMenu} onClose={() => setActiveMenu(null)} />
       </header>
+
+      {/* Full-screen focused search modal — replaces the old inline
+          search bar. Triggered from the header search button. */}
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Mobile fullscreen overlay menu */}
       <div

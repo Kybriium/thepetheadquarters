@@ -6,6 +6,7 @@ from django.utils import timezone
 from apps.core.responses import success_response
 from apps.analytics.models import Visitor
 from apps.contact.models import ContactMessage
+from apps.expenses.models import Expense
 from apps.orders.models import Order, OrderItem
 from apps.products.models import ProductVariant
 from apps.reviews.models import Review
@@ -30,6 +31,16 @@ class DashboardView(AdminBaseView):
             )["total"]
             or 0
         )
+
+        # Today's expenses — every penny that left the business today.
+        # Includes auto-recorded Stripe fees + dropship COGS as well as
+        # any manual rows the admin logged. Together with revenue this
+        # gives the real take-home figure on the dashboard.
+        todays_expenses = (
+            Expense.objects.filter(paid_at=today).aggregate(t=Sum("amount_pence"))["t"]
+            or 0
+        )
+        todays_net = todays_revenue - todays_expenses
 
         pending_count = Order.objects.filter(
             status__in=[Order.Status.PAID, Order.Status.PROCESSING]
@@ -68,6 +79,8 @@ class DashboardView(AdminBaseView):
                 "today": {
                     "orders_count": todays_orders.count(),
                     "revenue_pence": todays_revenue,
+                    "expenses_pence": todays_expenses,
+                    "net_pence": todays_net,
                     "pending_count": pending_count,
                 },
                 "low_stock_count": low_stock_count,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ImageGallery } from "./image-gallery";
 import { ProductInfo } from "./product-info";
 import { ShareButtons } from "./share-buttons";
+import { SizeFitSection } from "./size-fit-section";
 import type { ProductDetail } from "@/types/product";
 import type { CustomizationField } from "@/types/customization";
 
@@ -52,6 +53,17 @@ export function ProductMain({ product, productUrl, dict, customizationFields }: 
           customizationFields={customizationFields}
           onVariantChange={setSelectedVariantId}
         />
+        {/* Size & fit — auto-hides when product has no chart / guide /
+            fit notes (e.g. food, treats, toys). For collars / harnesses /
+            beds it's the highest-value addition to the PDP, and it
+            cuts the "will this fit my dog?" support emails. */}
+        <div className="mt-6">
+          <SizeFitSection
+            sizeChart={product.size_chart}
+            fitNotes={product.fit_notes}
+            measureGuide={product.measure_guide}
+          />
+        </div>
         <div className="mt-6 pt-6" style={{ borderTop: "1px solid var(--bg-border)" }}>
           <ShareButtons url={productUrl} title={product.name} />
         </div>

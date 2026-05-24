@@ -45,6 +45,27 @@ export interface AdminOrderItemCustomization {
   preview_image_url?: string;
 }
 
+/** SupplierProduct row presented to the admin order page as a suggestion. */
+export interface AdminOrderItemSupplierSuggestion {
+  supplier_id: string;
+  supplier_name: string;
+  supplier_url: string;
+  supplier_sku: string;
+  last_cost_pence: number;
+  is_preferred: boolean;
+  notes: string;
+}
+
+/** Denormalised view of the supplier this OrderItem was forwarded to. */
+export interface AdminOrderItemAssignedSupplier {
+  supplier_id: string;
+  supplier_name: string;
+  supplier_url: string;
+  supplier_sku: string;
+  cost_pence: number;
+  forwarded_at: string | null;
+}
+
 export interface AdminOrderItem {
   id: string;
   product_id: string | null;
@@ -63,6 +84,8 @@ export interface AdminOrderItem {
   supplier_id: string | null;
   supplier_cost: number;
   forwarded_to_supplier_at: string | null;
+  available_suppliers: AdminOrderItemSupplierSuggestion[];
+  assigned_supplier: AdminOrderItemAssignedSupplier | null;
   customizations: AdminOrderItemCustomization[];
   customization_surcharge: number;
 }
@@ -103,12 +126,39 @@ export interface AdminOrder {
   created_at: string;
   updated_at: string;
   items: AdminOrderItem[];
+  /** Expenses linked to this order (Stripe fees, dropship COGS, manual rows). */
+  expenses?: AdminOrderExpense[];
+}
+
+/**
+ * Minimal shape of an Expense as seen on the order detail page. The
+ * full ExpenseSerializer payload from /admin/expenses/ is a superset
+ * of this — listing only the fields the order page actually consumes
+ * keeps the type focused.
+ */
+export interface AdminOrderExpense {
+  id: string;
+  paid_at: string;
+  category: string;
+  category_label: string;
+  amount_pence: number;
+  amount_pounds: number;
+  description: string;
+  supplier_name: string | null;
+  receipt_filename: string;
+  receipt_url: string | null;
+  has_receipt: boolean;
+  auto_created: boolean;
 }
 
 export interface AdminDashboard {
   today: {
     orders_count: number;
     revenue_pence: number;
+    /** Sum of every Expense row paid today (auto + manual). */
+    expenses_pence: number;
+    /** revenue_pence − expenses_pence — the actual take-home for today. */
+    net_pence: number;
     pending_count: number;
   };
   low_stock_count: number;

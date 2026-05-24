@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Clock, AlertTriangle, Truck, TrendingUp, Mail, Star, Activity } from "lucide-react";
+import { Package, Clock, AlertTriangle, Truck, TrendingUp, Mail, Star, Activity, Wallet, Receipt } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { endpoints } from "@/config/endpoints";
 import { adminOrderKeys } from "@/hooks/use-admin-orders";
@@ -72,6 +72,23 @@ export function DashboardContent({ dict }: DashboardContentProps) {
       icon: TrendingUp,
     },
     {
+      key: "today_expenses",
+      label: "Today's Expenses",
+      value: formatPrice(data.today.expenses_pence),
+      icon: Receipt,
+    },
+    {
+      key: "today_net",
+      // The actual take-home for today after Stripe fees + dropship
+      // COGS + any manual expenses. Highlighted as the headline number
+      // so the admin sees real profit, not vanity revenue.
+      label: "Today's Net",
+      value: formatPrice(data.today.net_pence),
+      icon: Wallet,
+      highlight: true,
+      warning: data.today.net_pence < 0,
+    },
+    {
       key: "pending",
       label: dict.dashboard.pending,
       value: String(data.today.pending_count),
@@ -117,27 +134,49 @@ export function DashboardContent({ dict }: DashboardContentProps) {
     <div className="flex flex-col gap-8">
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        {stats.map((stat) => (
-          <div
-            key={stat.key}
-            className="rounded-lg"
-            style={{
-              background: "var(--bg-secondary)",
-              border: `1px solid ${stat.warning ? "var(--warning)" : "var(--bg-border)"}`,
-              padding: "var(--space-5)",
-            }}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)" }}>
-                {stat.label}
-              </span>
-              <stat.icon size={16} style={{ color: stat.warning ? "var(--warning)" : "var(--gold-dark)" }} />
+        {stats.map((stat) => {
+          // Three states for the card border / icon / number colour:
+          //  - warning (orange) for things needing admin action OR a
+          //    negative net day
+          //  - highlight (gold) for the headline number (today's net)
+          //  - neutral for everything else
+          const borderColor = stat.warning
+            ? "var(--warning)"
+            : stat.highlight
+              ? "rgba(187,148,41,0.4)"
+              : "var(--bg-border)";
+          const iconColor = stat.warning
+            ? "var(--warning)"
+            : stat.highlight
+              ? "var(--gold)"
+              : "var(--gold-dark)";
+          const valueColor = stat.warning
+            ? "var(--warning)"
+            : stat.highlight
+              ? "var(--gold)"
+              : "var(--white)";
+          return (
+            <div
+              key={stat.key}
+              className="rounded-lg"
+              style={{
+                background: "var(--bg-secondary)",
+                border: `1px solid ${borderColor}`,
+                padding: "var(--space-5)",
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)" }}>
+                  {stat.label}
+                </span>
+                <stat.icon size={16} style={{ color: iconColor }} />
+              </div>
+              <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "var(--text-3xl)", fontWeight: "var(--weight-regular)", color: valueColor }}>
+                {stat.value}
+              </p>
             </div>
-            <p style={{ fontFamily: "var(--font-cormorant)", fontSize: "var(--text-3xl)", fontWeight: "var(--weight-regular)", color: "var(--white)" }}>
-              {stat.value}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Recent orders */}

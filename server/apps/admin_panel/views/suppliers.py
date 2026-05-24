@@ -158,6 +158,82 @@ class AdminSupplierProductsView(AdminBaseView):
         return created_response(data=AdminSupplierProductSerializer(link).data)
 
 
+# ---------------------------------------------------------------------------
+# Variant-centred supplier-link management — used by the product edit page's
+# "Suppliers" tab where the admin asks "where do we buy this variant from?".
+# Complements AdminSupplierProductsView (which is supplier-centred:
+# "what does this supplier sell us?").
+# ---------------------------------------------------------------------------
+
+class AdminVariantSuppliersView(AdminBaseView):
+    """List + create supplier-product links for a single ProductVariant."""
+
+    def get(self, request, variant_id):
+        from apps.products.models import ProductVariant
+        if not ProductVariant.objects.filter(id=variant_id).exists():
+            return error_response("admin.variants.not_found", status_code=404)
+        items = (
+            SupplierProduct.objects
+            .filter(variant_id=variant_id)
+            .select_related("supplier", "variant__product")
+            .order_by("-is_preferred", "supplier__name")
+        )
+        return success_response(data=AdminSupplierProductSerializer(items, many=True).data)
+
+    def post(self, request, variant_id):
+        from apps.products.models import ProductVariant
+        if not ProductVariant.objects.filter(id=variant_id).exists():
+            return error_response("admin.variants.not_found", status_code=404)
+        # Force the variant id from the URL — caller can't sneak a
+        # different variant into the body to confuse our auth model.
+        data = {**request.data, "variant": str(variant_id)}
+        serializer = AdminSupplierProductSerializer(data=data)
+        if not serializer.is_valid():
+            return validation_error_response(serializer.errors)
+        try:
+            link = serializer.save()
+        except Exception as e:
+            # Most likely the (supplier, variant) unique constraint —
+            # surface a clean error rather than a 500.
+            return error_response("admin.supplier_product.duplicate", status_code=400)
+        return created_response(data=AdminSupplierProductSerializer(link).data)
+
+
+class AdminSupplierProductDetailView(AdminBaseView):
+    """Edit / delete a single SupplierProduct row by its UUID."""
+
+    def _get(self, sp_id):
+        try:
+            return SupplierProduct.objects.select_related("supplier", "variant__product").get(id=sp_id)
+        except SupplierProduct.DoesNotExist:
+            return None
+
+    def patch(self, request, sp_id):
+        sp = self._get(sp_id)
+        if not sp:
+            return error_response("admin.supplier_product.not_found", status_code=404)
+        # Don't allow re-pointing an existing row at a different variant
+        # or supplier from this endpoint — re-creating is safer because
+        # changing the FK silently could leave orders pointing at a row
+        # that no longer represents the right relationship.
+        editable = {"supplier_sku", "supplier_url", "last_cost", "is_preferred", "notes"}
+        payload = {k: v for k, v in request.data.items() if k in editable}
+        serializer = AdminSupplierProductSerializer(sp, data=payload, partial=True)
+        if not serializer.is_valid():
+            return validation_error_response(serializer.errors)
+        sp = serializer.save()
+        return success_response(data=AdminSupplierProductSerializer(sp).data)
+
+    def delete(self, request, sp_id):
+        sp = self._get(sp_id)
+        if not sp:
+            return error_response("admin.supplier_product.not_found", status_code=404)
+        sp.delete()
+        # Empty 204 — handled by the api-client parseBody helper.
+        from rest_framework.response import Response
+        return Response(status=204)
+
+
 class AdminSupplierPurchasesView(AdminBaseView):
     def get(self, request, supplier_id):
         from apps.admin_panel.serializers.procurement import AdminPurchaseOrderListSerializer

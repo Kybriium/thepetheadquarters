@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Truck, XCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Truck, XCircle, RefreshCw, Mail, ExternalLink, PackageCheck, Send } from "lucide-react";
 import { toast } from "@heroui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api-client";
 import {
+  adminOrderKeys,
   useAdminOrder,
   useCancelOrder,
   useRefundOrder,
@@ -18,6 +20,10 @@ import { StatusBadge } from "../../../_components/status-badge";
 import { ShipModal } from "../../../_components/ship-modal";
 import { ConfirmModal } from "../../../_components/confirm-modal";
 import { OrderStatusTimeline } from "../../../_components/order-status-timeline";
+import { OrderExpensesPanel } from "./order-expenses-panel";
+import { EmailCustomerModal } from "./email-customer-modal";
+import { ForwardToSupplierModal } from "./forward-to-supplier-modal";
+import type { AdminOrderItem } from "@/types/admin";
 import type enAdmin from "@/i18n/dictionaries/en/admin.json";
 
 interface OrderDetailViewProps {
@@ -43,10 +49,22 @@ export function OrderDetailView({ dict, orderNumber }: OrderDetailViewProps) {
   const cancelMutation = useCancelOrder(orderNumber);
   const refundMutation = useRefundOrder(orderNumber);
   const statusMutation = useTransitionOrderStatus(orderNumber);
+  const qc = useQueryClient();
+
+  // Used by the inline expenses panel to refresh the order after the
+  // admin uploads a receipt / logs an extra expense, so the new rows
+  // appear without a hard reload.
+  function refreshOrder() {
+    qc.invalidateQueries({ queryKey: adminOrderKeys.detail(orderNumber) });
+  }
 
   const [shipOpen, setShipOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  // Drives the Forward-to-supplier modal. `forwardingItem` holds the
+  // dropship OrderItem the admin is currently routing; null = closed.
+  const [forwardingItem, setForwardingItem] = useState<AdminOrderItem | null>(null);
 
   async function handleShip(carrier: CarrierCode, trackingNumber: string, trackingUrl: string) {
     try {
@@ -171,6 +189,22 @@ export function OrderDetailView({ dict, orderNumber }: OrderDetailViewProps) {
             {dict.orders.actions.deliver}
           </button>
         )}
+        {order.email && (
+          <button
+            onClick={() => setEmailOpen(true)}
+            disabled={actionLoading}
+            className="flex items-center gap-2 rounded-md px-4 py-2.5 transition-colors duration-200 disabled:opacity-50"
+            style={{
+              border: "1px solid var(--bg-border)",
+              fontFamily: "var(--font-montserrat)",
+              fontSize: "var(--text-sm)",
+              color: "var(--white-dim)",
+            }}
+          >
+            <Mail size={14} />
+            Email customer
+          </button>
+        )}
         {canRefund && (
           <button onClick={() => setRefundOpen(true)} disabled={actionLoading} className="flex items-center gap-2 rounded-md px-4 py-2.5 transition-colors duration-200 disabled:opacity-50" style={{ border: "1px solid var(--bg-border)", fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: "var(--white-dim)" }}>
             <RefreshCw size={14} />
@@ -225,6 +259,102 @@ export function OrderDetailView({ dict, orderNumber }: OrderDetailViewProps) {
                     COGS: {formatPrice(item.cogs_amount)}
                   </p>
                 )}
+
+                {/* Dropship workflow surface — three states:
+                    1. Not yet forwarded → "Forward to supplier" button +
+                       quick "Open saved supplier" link if one exists,
+                       so the admin can preview the supplier listing
+                       without committing to the cost yet.
+                    2. Forwarded → green confirmation banner with the
+                       supplier name, cost, SKU and a clickable URL
+                       so they can revisit the listing for support /
+                       reorder.
+                    3. Item is self-fulfilled → render nothing here. */}
+                {item.fulfillment_type === "dropship" && (
+                  <>
+                    {item.assigned_supplier ? (
+                      <div
+                        className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md p-2.5"
+                        style={{
+                          background: "rgba(46,125,50,0.08)",
+                          border: "1px solid rgba(46,125,50,0.25)",
+                        }}
+                      >
+                        <PackageCheck size={13} style={{ color: "var(--success)" }} />
+                        <span
+                          style={{
+                            fontFamily: "var(--font-montserrat)",
+                            fontSize: 11,
+                            color: "var(--white-dim)",
+                          }}
+                        >
+                          Forwarded to{" "}
+                          <strong style={{ color: "var(--white)" }}>
+                            {item.assigned_supplier.supplier_name}
+                          </strong>
+                          {" · "}
+                          <strong style={{ color: "var(--gold-dark)" }}>
+                            {formatPrice(item.assigned_supplier.cost_pence)}
+                          </strong>
+                          {item.assigned_supplier.supplier_sku && (
+                            <> · SKU {item.assigned_supplier.supplier_sku}</>
+                          )}
+                        </span>
+                        {item.assigned_supplier.supplier_url && (
+                          <a
+                            href={item.assigned_supplier.supplier_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 rounded-md px-2 py-0.5"
+                            style={{
+                              background: "rgba(187,148,41,0.10)",
+                              border: "1px solid rgba(187,148,41,0.25)",
+                              color: "var(--gold-dark)",
+                              fontFamily: "var(--font-montserrat)",
+                              fontSize: 10,
+                              letterSpacing: "var(--tracking-wide)",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Open listing
+                            <ExternalLink size={9} />
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => setForwardingItem(item)}
+                          className="flex items-center gap-1 rounded-md px-2.5 py-1"
+                          style={{
+                            background: "rgba(187,148,41,0.10)",
+                            border: "1px solid rgba(187,148,41,0.30)",
+                            color: "var(--gold)",
+                            fontFamily: "var(--font-montserrat)",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            letterSpacing: "var(--tracking-wide)",
+                          }}
+                        >
+                          <Send size={11} />
+                          Forward to supplier
+                        </button>
+                        {item.available_suppliers.length > 0 && (
+                          <span
+                            style={{
+                              fontFamily: "var(--font-montserrat)",
+                              fontSize: 10,
+                              color: "var(--white-faint)",
+                            }}
+                          >
+                            {item.available_suppliers.length} saved supplier{item.available_suppliers.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
                 {item.customizations.length > 0 && (
                   <div className="mt-2 rounded-md p-2.5" style={{ background: "rgba(187,148,41,0.08)", borderLeft: "2px solid var(--gold)" }}>
                     <p className="mb-1" style={{ fontFamily: "var(--font-montserrat)", fontSize: "10px", fontWeight: 600, color: "var(--gold-dark)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)" }}>
@@ -312,6 +442,11 @@ export function OrderDetailView({ dict, orderNumber }: OrderDetailViewProps) {
         </div>
       </div>
 
+      {/* Inline finances — auto-recorded Stripe fees + dropship COGS
+          appear here, plus a "Log expense" button with the order
+          pre-filled so the admin doesn't have to bounce to /finances. */}
+      <OrderExpensesPanel order={order} onChanged={refreshOrder} />
+
       {/* Tracking */}
       {order.tracking_carrier && (
         <div className="rounded-lg" style={{ background: "var(--bg-secondary)", border: "1px solid var(--bg-border)", padding: "var(--space-5)" }}>
@@ -354,6 +489,19 @@ export function OrderDetailView({ dict, orderNumber }: OrderDetailViewProps) {
       <ShipModal open={shipOpen} dict={dict} loading={shipMutation.isPending} onSubmit={handleShip} onCancel={() => setShipOpen(false)} />
       <ConfirmModal open={cancelOpen} title="Cancel Order?" message="This will cancel the order and restock items. The customer will be notified." confirmLabel="Cancel Order" destructive loading={cancelMutation.isPending} onConfirm={handleCancel} onCancel={() => setCancelOpen(false)} />
       <ConfirmModal open={refundOpen} title="Issue Refund?" message="This will refund the full order amount via Stripe and mark the order as cancelled. Items will be restocked." confirmLabel="Refund" destructive loading={refundMutation.isPending} onConfirm={handleRefund} onCancel={() => setRefundOpen(false)} />
+      <EmailCustomerModal
+        order={order}
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        onSent={refreshOrder}
+      />
+      <ForwardToSupplierModal
+        open={!!forwardingItem}
+        order={order}
+        item={forwardingItem}
+        onClose={() => setForwardingItem(null)}
+        onForwarded={refreshOrder}
+      />
     </div>
   );
 }

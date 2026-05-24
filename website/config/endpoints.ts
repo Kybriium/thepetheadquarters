@@ -14,6 +14,7 @@ export const endpoints = {
     list: `${API_BASE}/products/`,
     featured: `${API_BASE}/products/featured/`,
     detail: (slug: string) => `${API_BASE}/products/${slug}/`,
+    socialProof: (slug: string) => `${API_BASE}/products/${slug}/social-proof/`,
   },
   seo: {
     sitemapSlugs: `${API_BASE}/sitemap/slugs/`,
@@ -60,6 +61,8 @@ export const endpoints = {
     list: `${API_BASE}/orders/`,
     detail: (orderNumber: string) => `${API_BASE}/orders/${orderNumber}/`,
     bySession: (sessionId: string) => `${API_BASE}/orders/by-session/${sessionId}/`,
+    syncBySession: (sessionId: string) => `${API_BASE}/orders/sync-by-session/${sessionId}/`,
+    recentActivity: `${API_BASE}/orders/recent-activity/`,
   },
   promotions: {
     validate: `${API_BASE}/promotions/validate/`,
@@ -72,6 +75,7 @@ export const endpoints = {
     detail: (slug: string, id: string) => `${API_BASE}/products/${slug}/reviews/${id}/`,
     helpful: (slug: string, id: string) => `${API_BASE}/products/${slug}/reviews/${id}/helpful/`,
     mine: `${API_BASE}/me/reviews/`,
+    recent: `${API_BASE}/reviews/recent/`,
   },
   admin: {
     dashboard: `${API_BASE}/admin/dashboard/`,
@@ -83,6 +87,7 @@ export const endpoints = {
       cancel: (n: string) => `${API_BASE}/admin/orders/${n}/cancel/`,
       refund: (n: string) => `${API_BASE}/admin/orders/${n}/refund/`,
       notes: (n: string) => `${API_BASE}/admin/orders/${n}/notes/`,
+      email: (n: string) => `${API_BASE}/admin/orders/${n}/email/`,
       dropship: `${API_BASE}/admin/orders/dropship/`,
       forwardItem: (n: string, itemId: string) => `${API_BASE}/admin/orders/${n}/items/${itemId}/forward/`,
     },
@@ -124,6 +129,16 @@ export const endpoints = {
       products: (id: string) => `${API_BASE}/admin/suppliers/${id}/products/`,
       purchases: (id: string) => `${API_BASE}/admin/suppliers/${id}/purchases/`,
     },
+    /**
+     * Variant-centred view of supplier links — used by the product
+     * edit page's "Suppliers" tab. List/create only; per-row updates
+     * and deletes go through admin.supplierProducts.detail below.
+     */
+    variantSuppliers: (variantId: string) =>
+      `${API_BASE}/admin/variants/${variantId}/suppliers/`,
+    supplierProducts: {
+      detail: (id: string) => `${API_BASE}/admin/supplier-products/${id}/`,
+    },
     purchaseOrders: {
       list: `${API_BASE}/admin/purchase-orders/`,
       detail: (id: string) => `${API_BASE}/admin/purchase-orders/${id}/`,
@@ -150,6 +165,15 @@ export const endpoints = {
       vatReturn: `${API_BASE}/admin/reports/vat-return/`,
       vatReturnExport: `${API_BASE}/admin/reports/vat-return/export/`,
       promotions: `${API_BASE}/admin/reports/promotions/`,
+    },
+    finances: {
+      overview: `${API_BASE}/admin/finances/overview/`,
+      export: `${API_BASE}/admin/finances/export/`,
+    },
+    expenses: {
+      list: `${API_BASE}/admin/expenses/`,
+      detail: (id: string) => `${API_BASE}/admin/expenses/${id}/`,
+      receipt: (id: string) => `${API_BASE}/admin/expenses/${id}/receipt/`,
     },
     audit: {
       list: `${API_BASE}/admin/audit/`,

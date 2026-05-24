@@ -38,7 +38,7 @@ const ERROR_LABELS: Record<string, string> = {
   "promo.expired": "This code has expired.",
   "promo.exhausted": "This code has reached its limit.",
   "promo.min_subtotal": "Your cart doesn't meet the minimum spend for this code.",
-  "promo.first_order_only": "This code is for first-time customers only.",
+  "promo.first_order_only": "This code is for first-time customers only — looks like you've ordered with us before.",
   "promo.already_used": "You've already used this code.",
   "promo.scope_mismatch": "This code doesn't apply to anything in your cart.",
 };
@@ -104,7 +104,11 @@ export function PromoCodeBox({ email, onChange }: PromoCodeBoxProps) {
       onChange?.(state);
     } catch (err) {
       const code = err instanceof ApiError ? err.message : "promo.not_found";
-      const message = ERROR_LABELS[code] || "Could not apply this code.";
+      // Surface the raw code in the fallback so we know which case we
+      // missed if it's a new error from the backend that doesn't have
+      // a friendly label yet. Production users see the friendly label
+      // when one exists.
+      const message = ERROR_LABELS[code] || `Could not apply this code (${code}).`;
       setApplied(null);
       onChange?.(null);
       // Don't surface validation errors during silent re-validation,

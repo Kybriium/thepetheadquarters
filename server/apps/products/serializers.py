@@ -97,6 +97,11 @@ class ProductListSerializer(serializers.ModelSerializer):
     primary_image_alt = serializers.SerializerMethodField()
     min_price = serializers.SerializerMethodField()
     max_price = serializers.SerializerMethodField()
+    # Compare-at price of the cheapest variant — when present and greater
+    # than the variant's price, the storefront renders the "SAVE £X / -N%"
+    # badge on the product card. We don't expose all variants' compare-at
+    # values here to keep the list payload small.
+    min_compare_at_price = serializers.SerializerMethodField()
     in_stock = serializers.SerializerMethodField()
 
     class Meta:
@@ -114,6 +119,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "primary_image_alt",
             "min_price",
             "max_price",
+            "min_compare_at_price",
             "in_stock",
         ]
 
@@ -154,6 +160,17 @@ class ProductListSerializer(serializers.ModelSerializer):
             return None
         return variants.order_by("-price").first().price
 
+    def get_min_compare_at_price(self, obj) -> int | None:
+        # Return the compare-at-price of the cheapest variant ONLY when
+        # it represents a real discount. Returning None means "no sale";
+        # the storefront will hide the strikethrough/badge in that case.
+        cheapest = obj.variants.filter(is_active=True).order_by("price").first()
+        if not cheapest or not cheapest.compare_at_price:
+            return None
+        if cheapest.compare_at_price <= cheapest.price:
+            return None
+        return cheapest.compare_at_price
+
     def get_in_stock(self, obj) -> bool:
         return obj.variants.filter(is_active=True, stock_quantity__gt=0).exists()
 
@@ -167,6 +184,36 @@ class ProductDetailSerializer(ProductListSerializer):
     brand = serializers.SerializerMethodField()
     is_customizable = serializers.SerializerMethodField()
     option_types = serializers.SerializerMethodField()
+    measure_guide = serializers.SerializerMethodField()
+
+    def get_measure_guide(self, obj):
+        """
+        Combine the first associated category's measuring guide into
+        a single payload the storefront can render directly. Returns
+        None when no guide text/image is set so the PDP can hide the
+        "How to measure" block cleanly. Picks the first category by
+        sort_order — multi-category products rarely need to show more
+        than one guide and it's cheaper than rendering several.
+        """
+        link = (
+            obj.product_categories
+            .select_related()
+            .order_by("created_at")
+            .first()
+        )
+        if not link or not link.category_id:
+            return None
+        from apps.categories.models import Category
+        try:
+            category = Category.objects.get(id=link.category_id)
+        except Category.DoesNotExist:
+            return None
+        if not category.measure_guide_text and not category.measure_guide_image_url:
+            return None
+        return {
+            "text": category.measure_guide_text,
+            "image_url": category.measure_guide_image_url,
+        }
 
     class Meta(ProductListSerializer.Meta):
         fields = [
@@ -185,6 +232,7 @@ class ProductDetailSerializer(ProductListSerializer):
             "primary_image",
             "min_price",
             "max_price",
+            "min_compare_at_price",
             "in_stock",
             "translations",
             "variants",
@@ -192,7 +240,15 @@ class ProductDetailSerializer(ProductListSerializer):
             "category_ids",
             "is_customizable",
             "option_types",
+            "size_chart",
+            "fit_notes",
+            "measure_guide",
         ]
+
+    # ``measure_guide`` is a SerializerMethodField below — it's the
+    # combined view of the product's category-level "how to measure"
+    # text + diagram, so the frontend doesn't have to make a separate
+    # call.
 
     def get_option_types(self, obj) -> list:
         """

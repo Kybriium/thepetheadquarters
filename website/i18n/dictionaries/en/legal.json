@@ -5,63 +5,67 @@
     "sections": [
       {
         "heading": "1. Who we are",
-        "content": "The Pet Headquarters is a trading name of CHERYA HOLDINGS LIMITED, a company registered in England and Wales (company no. 17203315). Registered office: 167-169 Great Portland Street, London, W1W 5PF. In this policy, \"we\", \"us\", and \"our\" mean CHERYA HOLDINGS LIMITED. We are the data controller responsible for your personal data and we comply with the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018."
+        "content": "The Pet Headquarters is a trading name of CHERYA HOLDINGS LIMITED, a company registered in England and Wales (company no. 17203315). Registered office: 167-169 Great Portland Street, London, W1W 5PF. In this policy, \"we\", \"us\", and \"our\" mean CHERYA HOLDINGS LIMITED. We are the data controller responsible for your personal data and we comply with the UK General Data Protection Regulation (UK GDPR), the Data Protection Act 2018, and the Privacy and Electronic Communications Regulations (PECR)."
       },
       {
         "heading": "2. How to contact us about your data",
-        "content": "For any privacy-related question or to exercise your rights, email contact@thepetheadquarters.co.uk. You can also write to us at our registered office above. We aim to respond within 7 working days and always within the 30-day deadline UK GDPR allows."
+        "content": "For any privacy-related question or to exercise your rights, email contact@thepetheadquarters.co.uk. You can also write to us at our registered office above. We aim to respond within 7 working days and always within the 30-day deadline UK GDPR allows (extendable to 90 days for complex requests, with notice)."
       },
       {
-        "heading": "3. Information we collect",
-        "content": "We collect: contact information (name, email, phone, delivery address) when you place an order or create an account; payment information processed securely through our payment provider (we never see or store your full card number); browsing data including pages visited, products viewed and search queries; device and technical data such as IP address, browser type and operating system; communication data from emails, contact forms or customer service messages."
+        "heading": "3. Age and children's data",
+        "content": "You must be at least 18 years old to place an order with us — UK contract law gives minors only limited capacity to enter purchase contracts, and we are not equipped to verify parental consent for individual orders. You may create an account from age 13, the minimum age at which UK GDPR (Article 8) and the Data Protection Act 2018 (Section 9) allow you to consent to your own data processing. We do not knowingly collect personal data from anyone under 13 — if you are a parent or guardian and believe a child has provided us with their data, please contact us and we will delete it promptly. If you are between 13 and 17, your parent or guardian must place any orders on your behalf."
       },
       {
-        "heading": "4. How we use your information",
-        "content": "We use your data to process and fulfil your orders, communicate about your orders and account, improve our website and product range, send marketing communications (only with your consent), comply with our tax and legal obligations, and prevent fraud and abuse."
+        "heading": "4. Information we collect",
+        "content": "We collect: contact information (name, email, phone, delivery address) when you place an order or create an account; payment information processed securely through Stripe (we never see or store your full card number, only the last four digits and brand); order history and customisation uploads (e.g. pet photos for engraved or printed items); browsing data including pages visited, products viewed, search queries, and items added to your cart; device and technical data such as IP address (anonymised within 24 hours for analytics), browser type and operating system; communication data from emails, contact forms, and product reviews; review content you submit, including the display name you choose."
       },
       {
-        "heading": "5. Legal basis for processing",
-        "content": "We process your data on these bases: contractual necessity (to fulfil your order); legitimate interests (improving our services and preventing fraud); consent (for marketing communications and analytics, where you've opted in); legal obligation (tax records, accounting, statutory reporting)."
+        "heading": "5. How we use your information",
+        "content": "We use your data to: process and fulfil your orders (including passing your shipping details to our suppliers and couriers); communicate about your orders, account, returns and refunds; verify that promotional codes are eligible (e.g. first-order discounts); send marketing emails about similar products to those you've bought, where you've not opted out (PECR soft opt-in); send other marketing communications only with your explicit consent; improve our website and product range using anonymous, aggregated analytics; comply with our tax, accounting and statutory obligations; prevent fraud, abuse, and chargeback disputes; respond to and resolve customer service queries."
       },
       {
-        "heading": "6. Who we share your data with",
-        "content": "We share the minimum needed with these processors: Stripe (payment processing); our delivery courier(s) for shipping addresses; our email provider for transactional emails; Cloudinary (image hosting, where you upload personalisation images). Each processor is bound by a data processing agreement and only handles your data on our instructions. We never sell your personal data."
+        "heading": "6. Legal basis for processing",
+        "content": "We process your data on these UK GDPR bases: contractual necessity (to fulfil your order, manage your account, handle returns); legitimate interests (improving our services, preventing fraud, sending PECR soft-opt-in marketing about similar goods to existing customers, defending against legal claims); consent (for marketing to prospects who haven't yet bought from us, for any non-essential cookies, and for analytics); legal obligation (HMRC tax records, statutory accounting, Companies Act disclosures, breach reporting to the ICO)."
       },
       {
-        "heading": "7. International data transfers",
-        "content": "Some of our processors (e.g. Stripe, Cloudinary) process data outside the UK and EEA, including in the United States. Where this happens, we rely on the UK government's adequacy decisions or on the UK International Data Transfer Addendum to the EU Standard Contractual Clauses to ensure your data receives equivalent legal protection."
+        "heading": "7. Marketing communications",
+        "content": "If you've bought from us, we may email you about similar products under PECR's soft opt-in rule. Every email includes a one-click unsubscribe link, and you can also email contact@thepetheadquarters.co.uk at any time to opt out. If you've signed up to our newsletter without buying, we send marketing only on your explicit consent and you can withdraw it the same way. We do not run SMS marketing, telemarketing, or direct postal marketing."
       },
       {
-        "heading": "8. How long we keep your data",
-        "content": "Order records (including invoices and customer details on the order): 7 years from the order date, as required by HMRC for VAT and corporation tax. Account data: until you delete your account, then anonymised within 30 days. Marketing consent and communications: until you withdraw consent, then deleted within 30 days. Contact-form messages: 24 months. Analytics data: aggregated and not tied to your identity beyond 24 hours."
+        "heading": "8. Who we share your data with (subprocessors)",
+        "content": "We share the minimum needed with the following processors. Each is bound by a written agreement (a data processing agreement under UK GDPR Article 28) and may only handle your data on our instructions:\n\n• Stripe (payment processing, US-based) — card details, billing email, order amount.\n• Resend (transactional email, US-based) — your email address and the email content we send you.\n• Cloudinary (image hosting, US-based) — product images and any customisation images you upload.\n• Railway (application + database hosting, EU/US regions) — all of the above stored in our PostgreSQL database.\n• Cloudflare (DNS + email routing, global) — domain resolution and routing of contact@thepetheadquarters.co.uk to our team inbox.\n• Royal Mail, DPD, Evri, UPS or other couriers (as relevant) — your shipping address and contact details for delivery.\n• Our suppliers for dropshipped items — your shipping address and contact details for fulfilment.\n• Telegram (admin notifications only — order summaries to our team; never your full card or email body).\n\nWe never sell your personal data and we do not share it for marketing purposes with any third party."
       },
       {
-        "heading": "9. Security",
-        "content": "We use appropriate technical and organisational measures to protect your data: HTTPS-only delivery, encrypted database backups, access controls limiting who on our team can see customer data, and a card-data scope of zero (Stripe handles all payment details). We review these regularly and notify you and the ICO within 72 hours of any breach affecting your personal data, as required by UK GDPR."
+        "heading": "9. International data transfers",
+        "content": "Some of our processors (Stripe, Resend, Cloudinary, Cloudflare) process data outside the UK and EEA, mainly in the United States. Where this happens, we rely on the UK government's adequacy regulations (where they apply), the UK International Data Transfer Addendum (IDTA) to the EU Standard Contractual Clauses, or the UK-US Data Bridge under the EU-US Data Privacy Framework. You can request a copy of the safeguards in place by emailing contact@thepetheadquarters.co.uk."
       },
       {
-        "heading": "10. Your rights",
-        "content": "Under UK GDPR you have the right to: access your personal data; rectify inaccurate data; erase your data (\"right to be forgotten\"); restrict processing; data portability; object to processing; withdraw consent at any time. To exercise any of these, email contact@thepetheadquarters.co.uk."
+        "heading": "10. How long we keep your data",
+        "content": "• Order records (invoices, customer details on the order, VAT records): 6 years from the end of the accounting period in which the order was placed, the minimum HMRC requires for tax and corporation tax records.\n• Account data (profile, addresses, preferences): until you delete your account, then anonymised within 30 days. The associated order records survive in anonymised form to keep our accounting consistent.\n• Marketing consent and communications: until you withdraw consent, then deleted within 30 days.\n• Reviews you've posted: kept while visible on the product page. Hidden or removed reviews are deleted within 90 days.\n• Contact-form messages: 24 months from receipt.\n• Customisation uploads (e.g. pet photos for printing): deleted within 90 days of order completion unless you request earlier removal.\n• Anonymous analytics aggregates: kept indefinitely in aggregated form — they cannot be tied back to you."
       },
       {
-        "heading": "11. Right to complain",
+        "heading": "11. Security",
+        "content": "We use appropriate technical and organisational measures to protect your data: HTTPS-only delivery, encrypted database backups, access controls limiting who on our team can see customer data, no card-data ever touching our servers (Stripe handles all payment details), HttpOnly + Secure + SameSite-locked authentication cookies, and routine review of our subprocessors. We will notify you and the ICO within 72 hours of any breach affecting your personal data, as required by UK GDPR Article 33–34."
+      },
+      {
+        "heading": "12. Your rights",
+        "content": "Under UK GDPR you have the right to: access your personal data and receive a copy (subject access request); rectify inaccurate or incomplete data; erase your data (\"right to be forgotten\") where there is no overriding legitimate basis for us to keep it; restrict processing in certain circumstances; data portability — receive your data in a structured, commonly used, machine-readable format; object to processing that is based on legitimate interests; withdraw consent at any time, with no detriment to services not relying on consent; not be subject to a decision based solely on automated processing (we don't do this — see section 14). To exercise any of these, email contact@thepetheadquarters.co.uk. We may need to verify your identity before responding."
+      },
+      {
+        "heading": "13. Right to complain",
         "content": "If you believe we've handled your data unlawfully, you have the right to complain to the Information Commissioner's Office (ICO). Contact them at https://ico.org.uk/make-a-complaint/ or 0303 123 1113. We'd appreciate the chance to address concerns first if you contact us before going to the ICO."
       },
       {
-        "heading": "12. Automated decision-making",
-        "content": "We do not use automated decision-making, profiling, or algorithmic scoring that produces legal effects or similarly significant effects on you. Any review of high-risk orders is done by a person."
+        "heading": "14. Automated decision-making",
+        "content": "We do not use automated decision-making, profiling, or algorithmic scoring that produces legal effects or similarly significant effects on you. Any review of high-risk orders, refund disputes, or potentially abusive accounts is done by a person."
       },
       {
-        "heading": "13. Children",
-        "content": "Our website is not directed at children under 13. We do not knowingly collect personal data from children. If you believe a child has provided us with their data, please contact us and we will delete it promptly."
+        "heading": "15. Cookies and tracking",
+        "content": "We use the minimum tracking necessary. We do not use Google Analytics, Facebook Pixel, or any advertising cookies. See our Cookie Policy for full details on what we store on your device and why."
       },
       {
-        "heading": "14. Cookies",
-        "content": "We use as little tracking as possible — see our Cookie Policy for the full details."
-      },
-      {
-        "heading": "15. Changes to this policy",
-        "content": "We may update this policy as our services evolve. Material changes will be flagged on the website. The \"last updated\" date at the top always reflects the current version."
+        "heading": "16. Changes to this policy",
+        "content": "We may update this policy as our services evolve. Material changes will be flagged on the website and, where the change affects you significantly, by email if you have an account. The \"last updated\" date at the top always reflects the current version."
       }
     ]
   },
@@ -74,51 +78,75 @@
         "content": "The Pet Headquarters is a trading name of CHERYA HOLDINGS LIMITED, a company registered in England and Wales (company no. 17203315). Our registered office is 167-169 Great Portland Street, London, W1W 5PF. Contact us at contact@thepetheadquarters.co.uk. These Terms govern your use of our website and the purchase of products from us. By placing an order you accept these Terms. They are governed by the laws of England and Wales and any dispute is subject to the exclusive jurisdiction of the English courts."
       },
       {
-        "heading": "2. Products and pricing",
-        "content": "All prices are displayed in British Pounds (GBP) and include VAT where applicable. We make every effort to keep pricing accurate but reserve the right to correct genuine errors (see section 4 on order acceptance). Product descriptions, photographs and dimensions are for illustration; actual items may vary slightly. Stock displayed online is a guide and not a guarantee — see section 4."
+        "heading": "2. Eligibility — who can shop with us",
+        "content": "You must be at least 18 years old to place an order with us. UK contract law gives minors only limited capacity to enter purchase contracts, and we cannot verify parental consent for individual orders. If you are between 13 and 17, please ask a parent or guardian to place the order on your behalf. If we discover that an order was placed by someone under 18 without parental authorisation, we may cancel the order and refund the original payment method. Account creation requires you to be at least 13 — the minimum age UK GDPR allows you to consent to your own data processing."
       },
       {
-        "heading": "3. Placing an order",
-        "content": "When you place an order on our website, you are making an offer to purchase the products at the prices shown. Submitting an order does not yet form a contract between us."
+        "heading": "3. Account registration",
+        "content": "You may shop as a guest or create an account. If you create an account: you must provide accurate information and keep it up to date; you are responsible for keeping your password confidential and for any activity under your account; you must notify us promptly if you believe your account has been compromised. We may suspend or close accounts that breach these Terms, that we believe are being used fraudulently, or that have been inactive for more than 2 years. You can delete your account at any time from the account settings page — see our Privacy Policy for what happens to your data when you do."
       },
       {
-        "heading": "4. Order acceptance and contract formation",
-        "content": "The contract between us is formed only when we dispatch the goods to you and send you a dispatch confirmation. Until then, we may decline your order — for example if the product is out of stock, if there is a pricing error, or if we cannot verify payment. If we decline your order after taking payment, we will refund you in full within 5 working days."
+        "heading": "4. Products and pricing",
+        "content": "All prices are displayed in British Pounds (GBP). VAT is included where applicable; at the time of writing, CHERYA HOLDINGS LIMITED is not VAT-registered and so VAT is not charged on top of the displayed price. We will update this when we cross the £90,000 VAT registration threshold. We make every effort to keep pricing accurate but reserve the right to correct genuine errors (see section 6 on order acceptance). Product descriptions, photographs and dimensions are for illustration; actual items may vary slightly. Stock displayed online is a guide and not a guarantee — see section 6."
       },
       {
-        "heading": "5. Payment",
-        "content": "Payment is taken at the time you place your order through our secure payment processor (Stripe). We accept major credit and debit cards. We do not see or store your full card details."
+        "heading": "5. Placing an order",
+        "content": "When you place an order on our website, you are making an offer to purchase the products at the prices shown. Submitting an order does not yet form a contract between us. You will receive an order confirmation email — this confirms your offer has reached us but is not itself acceptance of the contract."
       },
       {
-        "heading": "6. Delivery",
-        "content": "We aim to dispatch within 1–2 working days and deliver within the timeframe shown at checkout. Delivery estimates are guidance, not guarantees. Risk of loss passes to you on delivery. We are not liable for delays caused by events outside our reasonable control (e.g. courier strikes, extreme weather, customs delays)."
+        "heading": "6. Order acceptance and contract formation",
+        "content": "The contract between us is formed only when we dispatch the goods to you and send you a dispatch confirmation. Until then, we may decline your order — for example if the product is out of stock, if there is a pricing error, if we cannot verify payment, or if we have reasonable grounds to suspect fraud or that the buyer is under 18 (see section 2). If we decline your order after taking payment, we will refund you in full within 5 working days to the original payment method."
       },
       {
-        "heading": "7. Right to cancel (14-day cooling-off)",
-        "content": "Under the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013, you have the right to cancel your order for any reason within 14 days, starting the day after you receive the goods. To cancel, email contact@thepetheadquarters.co.uk with your order number. You then have a further 14 days to return the goods. Goods should be returned in the same condition you received them, including original packaging where reasonably possible — you may handle the goods only as much as needed to establish their nature, characteristics and function (as you would in a shop). The cost of returning the goods is yours, unless the item is faulty or not as described. We will refund the full price you paid (including the original outbound shipping at the standard rate) within 14 days of receiving the goods back."
+        "heading": "7. Payment",
+        "content": "Payment is taken at the time you place your order through our secure payment processor (Stripe). We accept major credit and debit cards plus Apple Pay and Google Pay. We do not see or store your full card details — only the last four digits and the card brand, for receipt purposes. Failed payments mean we have not received your order; please retry or contact us if the problem persists."
       },
       {
-        "heading": "8. Custom or personalised items",
-        "content": "Items personalised to your specification (e.g. engraved with a name, printed with your photo) are exempt from the 14-day cancellation right under regulation 28(1)(b) of the Consumer Contracts Regulations 2013 — once made they cannot be resold. This does not affect your statutory rights if the item is faulty or not as described (see section 9)."
+        "heading": "8. Promotional codes and discounts",
+        "content": "Promotional codes (e.g. WELCOME10) may be advertised on our site or sent by email. Unless we say otherwise: each code is single-use per customer; only one code can be applied per order; first-order codes are only valid if you have no prior non-cancelled orders, including orders placed as a guest under the same email address; codes have no cash value and cannot be transferred. We may withdraw or modify codes at any time, but a code already used on a completed order will be honoured."
       },
       {
-        "heading": "9. Your rights under the Consumer Rights Act 2015",
+        "heading": "9. Delivery",
+        "content": "We aim to dispatch within 1–7 working days depending on the item (some products are made-to-order or dropshipped from suppliers — the product page shows the estimated dispatch window for each item). Delivery estimates are guidance, not guarantees. Risk of loss passes to you on delivery. We are not liable for delays caused by events outside our reasonable control (e.g. courier strikes, extreme weather, customs delays). If a delivery doesn't arrive within 30 days of dispatch, contact us so we can investigate with the courier."
+      },
+      {
+        "heading": "10. Right to cancel (14-day cooling-off)",
+        "content": "Under the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013, you have the right to cancel your order for any reason within 14 days, starting the day after you receive the goods. To cancel, email contact@thepetheadquarters.co.uk with your order number, or use the model cancellation form included with your goods. You then have a further 14 days to return the goods. Goods should be returned in the same condition you received them, including original packaging where reasonably possible — you may handle the goods only as much as needed to establish their nature, characteristics and function (as you would in a shop). The cost of returning the goods is yours, unless the item is faulty or not as described. We will refund the full price you paid (including the original outbound shipping at the standard rate) within 14 days of receiving the goods back, or within 14 days of receiving evidence that you have returned them, whichever is earlier."
+      },
+      {
+        "heading": "11. Custom or personalised items",
+        "content": "Items personalised to your specification (e.g. engraved with a name, printed with your photo) are exempt from the 14-day cancellation right under regulation 28(1)(b) of the Consumer Contracts Regulations 2013 — once made they cannot be resold. This does not affect your statutory rights if the item is faulty or not as described (see section 12)."
+      },
+      {
+        "heading": "12. Your rights under the Consumer Rights Act 2015",
         "content": "Goods must be of satisfactory quality, fit for purpose, and as described. If they are not, you have these tiered remedies: within 30 days of delivery you have the short-term right to reject and get a full refund; from 30 days to 6 months we have one chance to repair or replace the item, and if that fails you can keep the item with a price reduction or return it for a refund; beyond 6 months the same applies but it's for you to show the defect was present at delivery. Nothing in these Terms affects these statutory rights."
       },
       {
-        "heading": "10. Returns process",
-        "content": "Email contact@thepetheadquarters.co.uk with your order number before returning anything so we can give you the correct return address and any specific instructions. Please obtain proof of postage — we cannot refund items lost in return transit if no postage proof exists."
+        "heading": "13. Returns process",
+        "content": "Email contact@thepetheadquarters.co.uk with your order number before returning anything so we can give you the correct return address and any specific instructions (some items are returned to the supplier rather than to us). Please obtain proof of postage — we cannot refund items lost in return transit if no postage proof exists. Refunds are issued to the original payment method."
       },
       {
-        "heading": "11. Limitation of liability",
-        "content": "We are not liable for any indirect, incidental, or consequential losses arising from your use of our website or the products, except where liability cannot be excluded by law. Nothing in these Terms limits or excludes our liability for death or personal injury caused by our negligence, for fraud, or for any other liability that cannot be excluded under UK law."
+        "heading": "14. Reviews and user-generated content",
+        "content": "If you've bought an item from us, you may leave a review. By submitting a review you confirm: the review reflects your honest opinion based on actual experience; you are the author and own the rights to the text and any images you submit; the review does not contain anything unlawful, defamatory, abusive, obscene, infringing of third-party rights, or otherwise inappropriate. We may edit reviews for length or remove them entirely without notice. You grant us a worldwide, royalty-free licence to publish, reproduce and distribute your review on the website and in our marketing materials. Fake or paid-for reviews are prohibited under the Digital Markets, Competition and Consumers Act 2024 and we will remove and report any we identify."
       },
       {
-        "heading": "12. Changes to these Terms",
-        "content": "We may update these Terms from time to time. The version that applies to your order is the version live on the site when you placed it. Continued use of our website after a change constitutes acceptance of the updated Terms for future orders."
+        "heading": "15. Acceptable use of the website",
+        "content": "You agree not to: use automated tools to scrape, copy or harvest content from the site; place orders in bulk for resale without contacting us first; attempt to interfere with the security of the site, our payment processor, or other users' accounts; impersonate another person or submit false information; use the site for any unlawful purpose. We may suspend access, cancel orders, or take legal action against anyone who breaches these rules."
       },
       {
-        "heading": "13. Contact",
+        "heading": "16. Limitation of liability",
+        "content": "We are not liable for any indirect, incidental, or consequential losses arising from your use of our website or the products, except where liability cannot be excluded by law. Our maximum liability for any direct loss is the amount you paid for the order in question. Nothing in these Terms limits or excludes our liability for: death or personal injury caused by our negligence; fraud or fraudulent misrepresentation; defective products under the Consumer Protection Act 1987; any other liability that cannot be excluded under UK law."
+      },
+      {
+        "heading": "17. Intellectual property",
+        "content": "The website, our brand, our logo, product photography, and original content are owned by CHERYA HOLDINGS LIMITED or licensed to us. You may not copy, redistribute, or use them for commercial purposes without our written permission, except for reasonable personal use such as sharing a product link with a friend. Brand names of products we resell remain the trademarks of their respective owners."
+      },
+      {
+        "heading": "18. Changes to these Terms",
+        "content": "We may update these Terms from time to time. The version that applies to your order is the version live on the site when you placed it. We will keep older versions on request for 12 months. Continued use of our website after a change constitutes acceptance of the updated Terms for future orders."
+      },
+      {
+        "heading": "19. Contact",
         "content": "For any question about these Terms or your order, email contact@thepetheadquarters.co.uk or write to CHERYA HOLDINGS LIMITED, 167-169 Great Portland Street, London, W1W 5PF."
       }
     ]
@@ -129,7 +157,7 @@
     "sections": [
       {
         "heading": "1. Who we are",
-        "content": "The Pet Headquarters is a trading name of CHERYA HOLDINGS LIMITED (company no. 17203315), a company registered in England and Wales. This policy explains what we store on your device and why."
+        "content": "The Pet Headquarters is a trading name of CHERYA HOLDINGS LIMITED (company no. 17203315), a company registered in England and Wales. This policy explains what we store on your device and why. It complements our main Privacy Policy."
       },
       {
         "heading": "2. The short version",
@@ -137,11 +165,11 @@
       },
       {
         "heading": "3. Strictly necessary cookies",
-        "content": "When you sign in to your account, we set two short-lived cookies (tph_access and tph_refresh) so you can stay logged in across page loads and check out securely. These are essential for the service you've asked for and cannot be disabled under PECR. They are deleted when you log out."
+        "content": "When you sign in to your account, we set two short-lived cookies (tph_access and tph_refresh) so you can stay logged in across page loads and check out securely. These are essential for the service you've asked for and cannot be disabled under PECR. They are HttpOnly + Secure + SameSite-locked, and are deleted when you log out."
       },
       {
         "heading": "4. Cart and preferences (browser storage)",
-        "content": "Your shopping cart and any promo code you've applied are stored in your browser's local storage so they survive page refreshes. This data never leaves your device and is deleted when you place an order or clear your browser data. No identifier is sent to us."
+        "content": "Your shopping cart, recently-viewed products, any promo code you've applied, and your cookie-notice preference are stored in your browser's localStorage so they survive page refreshes. This data never leaves your device and is deleted when you place an order or clear your browser data. No identifier is sent to us."
       },
       {
         "heading": "5. Anonymous analytics",
@@ -153,14 +181,18 @@
       },
       {
         "heading": "7. What we don't do",
-        "content": "We don't sell, share, or transfer your data to third parties. We don't use cookies to track you across other websites. We don't show personalised ads. We don't use session replay, heatmaps, or any tool that records what you click or type."
+        "content": "We don't sell, share, or transfer your data to third parties for advertising. We don't use cookies to track you across other websites. We don't show personalised ads. We don't use session replay, heatmaps, or any tool that records what you click or type. We don't fingerprint your device."
       },
       {
-        "heading": "8. Updates",
+        "heading": "8. Children's data",
+        "content": "Our site is intended for adults aged 18 or over (with accounts available from age 13 with parental supervision). We do not knowingly set cookies or collect data from anyone under 13. See section 3 of our Privacy Policy for the full age requirements."
+      },
+      {
+        "heading": "9. Updates",
         "content": "We may update this policy as the site evolves. The \"last updated\" date at the top will reflect any changes."
       },
       {
-        "heading": "9. Contact",
+        "heading": "10. Contact",
         "content": "Questions about how we handle your data? Email contact@thepetheadquarters.co.uk."
       }
     ]

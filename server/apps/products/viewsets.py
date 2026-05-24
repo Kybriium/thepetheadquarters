@@ -85,3 +85,41 @@ class ProductViewSet(viewsets.GenericViewSet):
 
         serializer = ProductListSerializer(queryset, many=True, context=self.get_serializer_context())
         return success_response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="social-proof")
+    def social_proof(self, request, slug=None):
+        """
+        Public real-data social proof for a single product. Returned
+        fields are honest aggregates we can defend (DMCC Act 2024):
+          - bought_last_30d: sum of OrderItem.quantity for paid,
+            non-cancelled orders in the last 30 days.
+        The storefront hides the corresponding UI when bought_last_30d
+        is below a small threshold so a new shop doesn't display
+        "Bought 1 time" embarrassingly.
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.db.models import Sum
+        from apps.orders.models import Order, OrderItem
+
+        try:
+            product = Product.objects.get(slug=slug, is_active=True)
+        except Product.DoesNotExist:
+            return not_found_response("product.not_found")
+
+        since = timezone.now() - timedelta(days=30)
+        bought = (
+            OrderItem.objects
+            .filter(
+                product=product,
+                order__paid_at__isnull=False,
+                order__paid_at__gte=since,
+            )
+            .exclude(order__status=Order.Status.CANCELLED)
+            .aggregate(total=Sum("quantity"))["total"]
+            or 0
+        )
+
+        return success_response({
+            "bought_last_30d": int(bought),
+        })

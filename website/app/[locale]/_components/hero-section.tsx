@@ -3,7 +3,6 @@ import { HeroBackground } from "./hero-background";
 
 interface HeroSectionProps {
   dict: {
-    badge: string;
     title: string;
     subtitle: string;
     cta: string;
@@ -21,21 +20,6 @@ export function HeroSection({ dict }: HeroSectionProps) {
 
       <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6">
         <div className="max-w-2xl" data-animate="slide-left">
-          <span
-            className="mb-4 inline-block rounded-full px-3 py-1 sm:mb-6 sm:px-4 sm:py-1.5"
-            style={{
-              background: "rgba(187,148,41,0.15)",
-              color: "var(--gold-dark)",
-              border: "1px solid rgba(187,148,41,0.4)",
-              fontFamily: "var(--font-montserrat)",
-              fontSize: "var(--text-xs)",
-              letterSpacing: "var(--tracking-widest)",
-              textTransform: "uppercase",
-            }}
-          >
-            {dict.badge}
-          </span>
-
           <h1
             className="mb-4 sm:mb-6"
             style={{

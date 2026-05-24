@@ -6,6 +6,7 @@ import { getRootCategories } from "@/hooks/categories.server";
 import { getBrands } from "@/hooks/brands.server";
 
 import { ProductsView } from "./_components/products-view";
+import { Truck, ShieldCheck, RefreshCw, BadgeCheck } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Shop All Products",
@@ -49,6 +50,39 @@ export default async function ProductsPage({
             data-animate="divider"
             style={{ width: 60, height: 1, background: "var(--gold)" }}
           />
+
+          {/* Catalog-page trust strip — keeps "why buy from us" reasons
+              visible at the same time as the filters. Repeating the
+              site-wide USPs on the page where customers compare lots of
+              products has measurably positive impact on add-to-cart. */}
+          <div
+            className="mt-6 grid grid-cols-2 gap-2 rounded-md p-3 sm:grid-cols-4"
+            style={{
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--bg-border)",
+            }}
+          >
+            {[
+              { Icon: Truck, label: "Free UK delivery over £30" },
+              { Icon: ShieldCheck, label: "Secure Stripe checkout" },
+              { Icon: RefreshCw, label: "14-day returns" },
+              { Icon: BadgeCheck, label: "Trusted UK shop" },
+            ].map(({ Icon, label }) => (
+              <div key={label} className="flex items-center gap-2">
+                <Icon size={14} style={{ color: "var(--gold)" }} />
+                <span
+                  style={{
+                    fontFamily: "var(--font-montserrat)",
+                    fontSize: 11,
+                    color: "var(--white-dim)",
+                    letterSpacing: "var(--tracking-wide)",
+                  }}
+                >
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <ProductsView

@@ -51,3 +51,11 @@ docker-compose.override.yml
 *~
 .DS_Store
 Thumbs.db
+
+# Playwright / e2e artefacts
+# Auth state contains real JWTs from globalSetup — never commit
+website/tests/.auth/
+website/test-results/
+website/playwright-report/
+website/blob-report/
+website/.playwright/

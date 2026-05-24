@@ -100,7 +100,7 @@ class AdminOrderDetailView(AdminBaseView):
             order = Order.objects.prefetch_related("items").get(order_number=order_number)
         except Order.DoesNotExist:
             return error_response("admin.orders.not_found", status_code=404)
-        return success_response(data=AdminOrderDetailSerializer(order).data)
+        return success_response(data=AdminOrderDetailSerializer(order, context={"request": request}).data)
 
 
 class AdminOrderStatusView(AdminBaseView):
@@ -126,7 +126,7 @@ class AdminOrderStatusView(AdminBaseView):
         except OrderActionError as e:
             return error_response(e.code)
 
-        return success_response(data=AdminOrderDetailSerializer(order).data)
+        return success_response(data=AdminOrderDetailSerializer(order, context={"request": request}).data)
 
 
 class AdminOrderShipView(AdminBaseView):
@@ -161,7 +161,7 @@ class AdminOrderShipView(AdminBaseView):
         except OrderActionError as e:
             return error_response(e.code)
 
-        return success_response(data=AdminOrderDetailSerializer(order).data)
+        return success_response(data=AdminOrderDetailSerializer(order, context={"request": request}).data)
 
 
 class AdminOrderCancelView(AdminBaseView):
@@ -178,7 +178,7 @@ class AdminOrderCancelView(AdminBaseView):
         except OrderActionError as e:
             return error_response(e.code)
 
-        return success_response(data=AdminOrderDetailSerializer(order).data)
+        return success_response(data=AdminOrderDetailSerializer(order, context={"request": request}).data)
 
 
 class AdminOrderRefundView(AdminBaseView):
@@ -196,7 +196,7 @@ class AdminOrderRefundView(AdminBaseView):
             logger.error("Stripe refund error: %s", e)
             return error_response("admin.orders.refund_failed", status_code=502)
 
-        return success_response(data=AdminOrderDetailSerializer(order).data)
+        return success_response(data=AdminOrderDetailSerializer(order, context={"request": request}).data)
 
 
 class AdminOrderNotesView(AdminBaseView):
@@ -209,7 +209,7 @@ class AdminOrderNotesView(AdminBaseView):
         notes = request.data.get("internal_notes", "")
         order.internal_notes = notes
         order.save(update_fields=["internal_notes"])
-        return success_response(data=AdminOrderDetailSerializer(order).data)
+        return success_response(data=AdminOrderDetailSerializer(order, context={"request": request}).data)
 
 
 class AdminDropshipPendingView(AdminBaseView):
@@ -242,6 +242,76 @@ class AdminDropshipPendingView(AdminBaseView):
         )
 
 
+class AdminOrderEmailCustomerView(AdminBaseView):
+    """
+    POST a manual email to the customer associated with an order, sent
+    on behalf of the company (DEFAULT_FROM_EMAIL via Resend HTTP API).
+
+    Body:
+        { "subject": "...", "body": "..." }
+
+    The frontend opens a modal on /admin/orders/<n> and lets the admin
+    type subject + multi-line body. Response includes the recipient so
+    the toast can confirm where it landed.
+    """
+
+    # Rate-limit at the throttle layer would be nice but for now we
+    # trust staff users not to spam customers.
+
+    MAX_SUBJECT_LEN = 200
+    MAX_BODY_LEN = 5000
+
+    def post(self, request, order_number):
+        try:
+            order = Order.objects.get(order_number=order_number)
+        except Order.DoesNotExist:
+            return error_response("admin.orders.not_found", status_code=404)
+
+        subject = (request.data.get("subject") or "").strip()
+        body = (request.data.get("body") or "").strip()
+
+        if not subject:
+            return error_response("admin.orders.email_subject_required", status_code=400)
+        if not body:
+            return error_response("admin.orders.email_body_required", status_code=400)
+        if len(subject) > self.MAX_SUBJECT_LEN:
+            return error_response("admin.orders.email_subject_too_long", status_code=400)
+        if len(body) > self.MAX_BODY_LEN:
+            return error_response("admin.orders.email_body_too_long", status_code=400)
+        if not order.email:
+            return error_response("admin.orders.no_customer_email", status_code=400)
+
+        from apps.orders.services import send_admin_message_to_customer
+
+        ok = send_admin_message_to_customer(
+            order,
+            subject=subject,
+            body=body,
+            sent_by=request.user,
+        )
+        if not ok:
+            return error_response("admin.orders.email_send_failed", status_code=502)
+
+        # Append an internal-notes line so the next admin who opens this
+        # order sees what was sent and by whom (proper audit + customer
+        # service trail). AuditLog also gets a row via the middleware
+        # that watches model writes; this note is what's visible inline.
+        try:
+            sender_label = (
+                getattr(request.user, "email", None) or "system"
+            )
+            timestamp = timezone.now().strftime("%Y-%m-%d %H:%M")
+            entry = f"[{timestamp}] Emailed {order.email} by {sender_label}: {subject}"
+            order.internal_notes = (
+                f"{order.internal_notes}\n{entry}" if order.internal_notes else entry
+            )
+            order.save(update_fields=["internal_notes"])
+        except Exception:
+            logger.exception("Failed to append admin-email note to order %s", order_number)
+
+        return success_response({"recipient": order.email, "subject": subject})
+
+
 class AdminOrderForwardItemView(AdminBaseView):
     """Mark a dropship order item as forwarded to its supplier."""
 
@@ -268,6 +338,18 @@ class AdminOrderForwardItemView(AdminBaseView):
             "forwarded_to_supplier_at",
             "fulfillment_status",
         ])
+
+        # Record / refresh the cogs_dropship Expense row tied to this
+        # OrderItem. Idempotent — re-runs on subsequent edits just
+        # update the amount/supplier in place.
+        try:
+            from apps.expenses.services import record_dropship_cogs
+            record_dropship_cogs(item)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Failed to record dropship COGS for OrderItem %s", item.id
+            )
 
         from apps.admin_panel.serializers.orders import AdminOrderItemSerializer
         return success_response(data=AdminOrderItemSerializer(item).data)

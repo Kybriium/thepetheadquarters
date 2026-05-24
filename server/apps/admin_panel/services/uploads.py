@@ -55,13 +55,17 @@ def _validate_image(file):
     return img, fmt
 
 
-def upload_image(file, folder="products"):
+def upload_image(file, folder="products", request=None):
     """
     Upload an image and return its public URL.
 
     Args:
         file: Django UploadedFile (multipart/form-data)
         folder: subfolder within storage
+        request: the originating HTTPRequest, used only by the
+            local-storage path to build an absolute URL. Optional;
+            without it we fall back to a relative `/media/...` URL
+            which means downstream callers must accept that shape.
 
     Returns:
         dict with 'url' (public URL) and 'storage' ('cloudinary' or 'local')
@@ -72,7 +76,7 @@ def upload_image(file, folder="products"):
     if settings.CLOUDINARY_URL:
         return _upload_to_cloudinary(file, folder)
 
-    return _upload_to_local(file, folder)
+    return _upload_to_local(file, folder, request=request)
 
 
 def _upload_to_cloudinary(file, folder):
@@ -97,8 +101,16 @@ def _upload_to_cloudinary(file, folder):
     }
 
 
-def _upload_to_local(file, folder):
-    """Save to MEDIA_ROOT/<folder>/<random_name>.<ext>"""
+def _upload_to_local(file, folder, request=None):
+    """Save to MEDIA_ROOT/<folder>/<random_name>.<ext>.
+
+    Returns an ABSOLUTE URL when a request is provided (e.g.
+    `http://localhost:8000/media/products/abc.jpg`). Falls back to a
+    relative `/media/...` URL otherwise. Why absolute matters:
+    downstream callers persist this URL as a `ProductImage.url`,
+    which is validated as `URLField` — relative paths fail that
+    validator and surface as a 422 to the admin.
+    """
     ext = Path(file.name).suffix.lower() or ".jpg"
     if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
         ext = ".jpg"
@@ -113,7 +125,8 @@ def _upload_to_local(file, folder):
     )
 
     # Build public URL: /media/<folder>/<name>
-    url = f"{settings.MEDIA_URL}{saved_path}"
+    relative_url = f"{settings.MEDIA_URL}{saved_path}"
+    url = request.build_absolute_uri(relative_url) if request is not None else relative_url
 
     return {
         "url": url,

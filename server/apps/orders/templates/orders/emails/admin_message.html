@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
+  <title>{{ site_name }}</title>
+</head>
+<body style="margin:0;padding:0;background:#F4F1EA;font-family:Arial,sans-serif;">
+  {# Preheader — inbox preview text. The admin's subject is shown next
+     to it in most clients, so keep this generic. #}
+  <div style="display:none;font-size:1px;color:#F4F1EA;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family:Arial,sans-serif;">
+    A message from {{ site_name }} about your order.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F1EA;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:40px auto;background:#FFFFFF;border-radius:4px;border:1px solid #DED9CF;">
+          <tr>
+            <td style="padding:40px 32px 16px;text-align:center;">
+              <h1 style="margin:0 0 8px;font-size:24px;font-weight:400;color:#111111;letter-spacing:0.02em;">{{ site_name }}</h1>
+              <p style="margin:0;font-size:13px;color:#888888;letter-spacing:0.05em;text-transform:uppercase;">A message about your order</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 32px;">
+              <p style="margin:0 0 16px;font-size:14px;color:#555555;">
+                Hi{% if customer_first_name %} {{ customer_first_name }}{% endif %},
+              </p>
+
+              {# The admin's message — preserves line breaks via Django's
+                 `linebreaks` filter, which converts `\n\n` to `<p>` and
+                 single `\n` to `<br>`. Auto-escapes HTML so an admin
+                 typing "<script>" can't ship XSS to the customer. #}
+              <div style="margin:0 0 24px;font-size:14px;color:#111111;line-height:1.55;">
+                {{ body|linebreaks }}
+              </div>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;background:#FAF8F2;border:1px solid #DED9CF;border-radius:4px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="margin:0;font-size:11px;color:#888888;letter-spacing:0.05em;text-transform:uppercase;">Order reference</p>
+                    <p style="margin:4px 0 0;font-size:15px;color:#111111;font-weight:600;">{{ order.order_number }}</p>
+                  </td>
+                  <td style="padding:14px 18px;text-align:right;">
+                    {# CTA — light gold button taking the customer to their
+                       order page so they can verify the message is real. #}
+                    <a href="{{ order_url }}" style="display:inline-block;padding:10px 22px;background:#C6A030;color:#FFFFFF;text-decoration:none;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border-radius:3px;">View order</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:24px 0 0;font-size:13px;color:#555555;">
+                Reply to this email if you'd like to respond — it goes
+                straight to <strong>{{ reply_to }}</strong>.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;border-top:1px solid #DED9CF;text-align:center;">
+              {# Companies Act 2006 s.82 — registered identity required
+                 on every business communication. #}
+              <p style="margin:0 0 8px;font-size:11px;color:#999999;line-height:1.5;">
+                {{ site_name }} is a trading name of CHERYA HOLDINGS LIMITED, a company<br/>
+                registered in England and Wales (no. 17203315).<br/>
+                Registered office: 167-169 Great Portland Street, London, W1W 5PF.
+              </p>
+              <p style="margin:0;font-size:12px;color:#999999;">&copy; {{ site_name }}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

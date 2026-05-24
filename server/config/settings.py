@@ -52,6 +52,7 @@ LOCAL_APPS = [
     "apps.orders",
     "apps.suppliers",
     "apps.procurement",
+    "apps.expenses",
     "apps.promotions",
     "apps.reviews",
     "apps.analytics",
@@ -309,6 +310,37 @@ if CLOUDINARY_URL:
     import cloudinary
     cloudinary.config(secure=True)  # auto-reads CLOUDINARY_URL from env
 
+# ---------------------------------------------------------------------------
+# Private object storage — S3-compatible (Railway Bucket / Cloudflare R2 /
+# Backblaze B2 / AWS S3). Used for files the public should never download
+# directly: customer customisation uploads, admin-uploaded expense
+# receipts, supplier invoices, etc.
+#
+# Configure with the standard AWS_* env names so any provider works:
+#   AWS_ACCESS_KEY_ID
+#   AWS_SECRET_ACCESS_KEY
+#   AWS_STORAGE_BUCKET_NAME
+#   AWS_S3_ENDPOINT_URL   (e.g. https://gateway.storjshare.io for Storj,
+#                          or the Railway/R2-provided endpoint)
+#   AWS_S3_REGION_NAME    (defaults to 'auto' — works for R2/Railway)
+#
+# When AWS_STORAGE_BUCKET_NAME is empty the code paths fall back to local
+# filesystem storage under MEDIA_ROOT/private/ so dev still works without
+# a bucket configured.
+# ---------------------------------------------------------------------------
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
+AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default="")
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="auto")
+AWS_S3_ADDRESSING_STYLE = config("AWS_S3_ADDRESSING_STYLE", default="virtual")
+# Signed URL TTL for private downloads — 10 minutes is generous enough
+# that the admin's browser won't hit it on slow PDFs, short enough that
+# accidentally-shared links expire fast.
+AWS_S3_SIGNED_URL_TTL_SECONDS = int(config("AWS_S3_SIGNED_URL_TTL_SECONDS", default=600))
+
+PRIVATE_STORAGE_ENABLED = bool(AWS_STORAGE_BUCKET_NAME and AWS_ACCESS_KEY_ID)
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---------------------------------------------------------------------------
@@ -335,10 +367,21 @@ REST_FRAMEWORK = {
         "apps.core.throttling.UserSustainedThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon_burst": "30/minute",
-        "anon_sustained": "500/day",
-        "user_burst": "60/minute",
-        "user_sustained": "2000/day",
+        # Anonymous visitors fire ~10-15 requests just rendering the
+        # landing page (categories, brands, reviews, activity, hero
+        # images, etc). 30/minute was triggering 429s for legit
+        # browsing sessions; 120/min keeps anti-abuse pressure on
+        # while letting a real visitor click around freely.
+        "anon_burst": "120/minute",
+        "anon_sustained": "2000/day",
+        # Authenticated users had a 60/minute cap that was too tight —
+        # a single admin opening the dashboard fires ~15 parallel
+        # requests (orders + analytics + finances + recent activity).
+        # Loading two admin pages in a row blew the budget and tripped
+        # 429s for the rest of the minute. Bumping to a level that
+        # still rate-limits abuse but accommodates real admin usage.
+        "user_burst": "300/minute",
+        "user_sustained": "10000/day",
         # Customization image uploads — tight because each request stores a file.
         "customization_upload": "10/minute",
     },

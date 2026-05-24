@@ -131,6 +131,10 @@ class AdminProductDetailSerializer(serializers.ModelSerializer):
     images = AdminProductImageSerializer(many=True, read_only=True)
     category_ids = serializers.SerializerMethodField()
     option_types = serializers.SerializerMethodField()
+    # Measuring guide inherited from the product's first category —
+    # admin needs to see this so they know whether the PDP will show
+    # a "How to measure" block alongside their size_chart.
+    measure_guide = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -149,12 +153,33 @@ class AdminProductDetailSerializer(serializers.ModelSerializer):
             "average_rating",
             "review_count",
             "category_ids",
+            "size_chart",
+            "fit_notes",
+            "measure_guide",
             "variants",
             "images",
             "option_types",
             "created_at",
             "updated_at",
         ]
+
+    def get_measure_guide(self, obj):
+        link = obj.product_categories.order_by("created_at").first()
+        if not link or not link.category_id:
+            return None
+        from apps.categories.models import Category
+        try:
+            cat = Category.objects.get(id=link.category_id)
+        except Category.DoesNotExist:
+            return None
+        if not cat.measure_guide_text and not cat.measure_guide_image_url:
+            return None
+        return {
+            "category_id": str(cat.id),
+            "category_slug": cat.slug,
+            "text": cat.measure_guide_text,
+            "image_url": cat.measure_guide_image_url,
+        }
 
     def get_option_types(self, obj) -> list:
         return AdminProductOptionTypeLinkSerializer(
@@ -196,6 +221,39 @@ class AdminProductWriteSerializer(serializers.Serializer):
     category_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, default=list
     )
+    # Size & fit — admin can populate via the new tab. Both optional;
+    # the PDP hides the entire section when both are empty so missing
+    # them doesn't break anything for products where sizing isn't a
+    # thing (food, treats, toys).
+    size_chart = serializers.JSONField(required=False)
+    fit_notes = serializers.CharField(
+        required=False, allow_blank=True, default="", max_length=500,
+    )
+
+    def validate_size_chart(self, value):
+        """Shape validator: must be either empty dict or
+        {columns: list[str], rows: list[list[str]]} with matching widths.
+        Keeps the table render predictable on the PDP."""
+        if not value:
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Must be an object.")
+        columns = value.get("columns", [])
+        rows = value.get("rows", [])
+        if not isinstance(columns, list) or not isinstance(rows, list):
+            raise serializers.ValidationError("columns and rows must be arrays.")
+        if any(not isinstance(c, str) for c in columns):
+            raise serializers.ValidationError("Every column header must be a string.")
+        for i, row in enumerate(rows):
+            if not isinstance(row, list):
+                raise serializers.ValidationError(f"Row {i + 1} must be an array.")
+            if len(row) != len(columns):
+                raise serializers.ValidationError(
+                    f"Row {i + 1} has {len(row)} cells but there are {len(columns)} columns."
+                )
+            if any(not isinstance(c, str) for c in row):
+                raise serializers.ValidationError(f"Row {i + 1} cells must all be strings.")
+        return {"columns": columns, "rows": rows}
 
 
 class AdminVariantWriteSerializer(serializers.Serializer):

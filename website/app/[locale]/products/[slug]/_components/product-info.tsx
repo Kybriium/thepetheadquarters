@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "@heroui/react";
-import { ShoppingCart, Minus, Plus } from "lucide-react";
+import { ShoppingCart, Minus, Plus, Flame, TrendingUp } from "lucide-react";
 import { StarRating } from "@/components/ui/star-rating";
 import { useCart } from "@/lib/cart-context";
 import { track } from "@/lib/analytics";
+import { rememberProduct } from "@/lib/recently-viewed";
+import { useProductSocialProof } from "@/lib/product-social-proof";
+import { FreeDeliveryProgress } from "@/components/storefront/free-delivery-progress";
+import { TrustBadgesCluster } from "@/components/storefront/trust-badges-cluster";
+import { PaymentMethodsStrip } from "@/components/storefront/payment-methods-strip";
 import { VariantSelector } from "./variant-selector";
 import { CustomizationPanel } from "./customization-panel";
 import type { ProductDetail } from "@/types/product";
@@ -64,12 +69,20 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
     surcharge: number;
   }>({ isValid: requiredCount === 0, answers: [], summary: [], surcharge: 0 });
 
-  // Fire a product_view event once per product per mount.
+  // Fire a product_view event once per product per mount, and also
+  // remember the product in localStorage so the "Recently viewed" rows
+  // on the landing page (and elsewhere) can surface it to this visitor.
   useEffect(() => {
     track("product_view", {
       product_id: product.id,
       product_slug: product.slug,
       product_name: product.name,
+    });
+    rememberProduct({
+      slug: product.slug,
+      name: product.name,
+      image: product.primary_image,
+      price: product.min_price,
     });
     // We intentionally do NOT depend on the product object identity to
     // avoid double-firing on re-renders; the slug change re-mounts the
@@ -81,6 +94,46 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
   const displayPrice = selectedVariant
     ? selectedVariant.price + customization.surcharge
     : null;
+  // Sale economics — guard against the "compare_at is set but lower
+  // than price" case so we never render a fake markdown.
+  const onSale = !!(
+    selectedVariant?.compare_at_price &&
+    selectedVariant.compare_at_price > selectedVariant.price
+  );
+  const saveAmount = onSale
+    ? (selectedVariant!.compare_at_price as number) - selectedVariant!.price
+    : 0;
+  const savePercent = onSale
+    ? Math.round((saveAmount / (selectedVariant!.compare_at_price as number)) * 100)
+    : 0;
+
+  // Honest social proof — pulls live order counts and only renders the
+  // line when the figure is meaningful (≥3) so a new shop doesn't say
+  // "Bought 1 time".
+  const socialProof = useProductSocialProof(product.slug);
+  const showBoughtCount =
+    socialProof !== undefined &&
+    socialProof !== null &&
+    socialProof.bought_last_30d >= 3;
+
+  // Sticky mobile add-to-cart — pinned to the bottom of the viewport
+  // once the regular Add to Cart scrolls off-screen. Watching a
+  // sentinel ref via IntersectionObserver avoids attaching a scroll
+  // listener (cheaper, and the API is exact about the threshold).
+  const addToCartRef = useRef<HTMLDivElement | null>(null);
+  const [stickyVisible, setStickyVisible] = useState(false);
+  useEffect(() => {
+    const el = addToCartRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => setStickyVisible(!e.isIntersecting));
+      },
+      { rootMargin: "0px 0px -40px 0px", threshold: 0 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   function handleAddToCart() {
     if (!selectedVariant) {
@@ -144,16 +197,36 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
         />
       )}
 
+      {/* Big red SAVE ribbon — only renders when there's a real discount.
+          Sits above the price block so it's the first thing a customer
+          sees about the cost. */}
+      {onSale && (
+        <div
+          className="inline-flex items-center gap-2 self-start rounded-md px-3 py-1.5"
+          style={{
+            background: "#B91C1C",
+            color: "#FFFFFF",
+            fontFamily: "var(--font-montserrat)",
+            fontSize: "var(--text-sm)",
+            fontWeight: 800,
+            letterSpacing: "var(--tracking-wide)",
+          }}
+        >
+          SAVE {formatPrice(saveAmount)} · −{savePercent}%
+        </div>
+      )}
+
       {/* Price */}
-      <div className="flex items-baseline gap-3">
+      <div className="flex flex-wrap items-baseline gap-3">
         {selectedVariant && displayPrice !== null ? (
           <>
             <span
               style={{
                 fontFamily: "var(--font-montserrat)",
-                fontSize: "var(--text-2xl)",
+                fontSize: "clamp(1.75rem, 5vw, 2.25rem)",
                 fontWeight: "var(--weight-bold)",
-                color: "var(--white)",
+                color: onSale ? "#FF6B6B" : "var(--white)",
+                lineHeight: 1,
               }}
             >
               {formatPrice(displayPrice)}
@@ -169,38 +242,24 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
                 (incl. +{formatPrice(customization.surcharge)} personalization)
               </span>
             )}
-            {selectedVariant.compare_at_price && selectedVariant.compare_at_price > selectedVariant.price && (
-              <>
-                <span
-                  style={{
-                    fontFamily: "var(--font-montserrat)",
-                    fontSize: "var(--text-lg)",
-                    color: "var(--white-faint)",
-                    textDecoration: "line-through",
-                  }}
-                >
-                  {formatPrice(selectedVariant.compare_at_price)}
-                </span>
-                <span
-                  className="rounded-full px-2 py-0.5"
-                  style={{
-                    background: "rgba(187,148,41,0.15)",
-                    color: "var(--gold)",
-                    fontFamily: "var(--font-montserrat)",
-                    fontSize: "var(--text-xs)",
-                    fontWeight: "var(--weight-semibold)",
-                  }}
-                >
-                  {dict.onSale}
-                </span>
-              </>
+            {onSale && (
+              <span
+                style={{
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: "var(--text-lg)",
+                  color: "var(--white-faint)",
+                  textDecoration: "line-through",
+                }}
+              >
+                {formatPrice(selectedVariant!.compare_at_price as number)}
+              </span>
             )}
           </>
         ) : (
           <span
             style={{
               fontFamily: "var(--font-montserrat)",
-              fontSize: "var(--text-2xl)",
+              fontSize: "clamp(1.75rem, 5vw, 2.25rem)",
               fontWeight: "var(--weight-bold)",
               color: "var(--white)",
             }}
@@ -213,6 +272,23 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
           </span>
         )}
       </div>
+
+      {/* Honest social-proof line — hidden when count is too low to be
+          persuasive. Real OrderItem aggregate from the backend. */}
+      {showBoughtCount && (
+        <p
+          className="flex items-center gap-1.5"
+          style={{
+            fontFamily: "var(--font-montserrat)",
+            fontSize: "var(--text-xs)",
+            color: "var(--gold-dark)",
+            fontWeight: 600,
+          }}
+        >
+          <TrendingUp size={13} />
+          Bought {socialProof!.bought_last_30d} times in the last 30 days
+        </p>
+      )}
 
       {/* Short description */}
       {product.short_description && (
@@ -248,26 +324,62 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
         />
       )}
 
-      {/* Stock status */}
-      {stockStatus && (
+      {/* Stock status — low/out-of-stock get a prominent red banner so
+          they're unmissable above the add-to-cart button. The "in stock"
+          state stays a quiet green line because shouting about it on
+          every product would dilute the urgency of the low-stock case. */}
+      {stockStatus === "low" && selectedVariant && (
+        <div
+          className="flex items-center gap-2 rounded-md p-3"
+          style={{
+            background: "rgba(214,40,40,0.10)",
+            border: "1px solid rgba(214,40,40,0.35)",
+          }}
+        >
+          <Flame size={16} style={{ color: "#FF6B6B" }} />
+          <p
+            style={{
+              fontFamily: "var(--font-montserrat)",
+              fontSize: "var(--text-sm)",
+              fontWeight: 600,
+              color: "#FF6B6B",
+              lineHeight: 1.3,
+            }}
+          >
+            Only <strong>{selectedVariant.stock_quantity}</strong> left in stock — order today
+          </p>
+        </div>
+      )}
+      {stockStatus === "out" && (
+        <div
+          className="rounded-md p-3"
+          style={{
+            background: "rgba(214,40,40,0.10)",
+            border: "1px solid rgba(214,40,40,0.35)",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "var(--font-montserrat)",
+              fontSize: "var(--text-sm)",
+              fontWeight: 600,
+              color: "#FF6B6B",
+            }}
+          >
+            {dict.outOfStock}
+          </p>
+        </div>
+      )}
+      {stockStatus === "in" && (
         <span
           style={{
             fontFamily: "var(--font-montserrat)",
             fontSize: "var(--text-sm)",
             fontWeight: "var(--weight-medium)",
-            color:
-              stockStatus === "out"
-                ? "var(--error)"
-                : stockStatus === "low"
-                  ? "var(--warning)"
-                  : "var(--success)",
+            color: "var(--success)",
           }}
         >
-          {stockStatus === "out"
-            ? dict.outOfStock
-            : stockStatus === "low"
-              ? dict.lowStock.replace("{count}", String(selectedVariant!.stock_quantity))
-              : dict.inStock}
+          {dict.inStock}
         </span>
       )}
 
@@ -285,7 +397,10 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
       )}
 
       {/* Quantity + Add to Cart */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div
+        ref={addToCartRef}
+        className="flex flex-col gap-3 sm:flex-row sm:items-center"
+      >
         {/* Quantity */}
         <div
           className="flex items-center overflow-hidden rounded-md"
@@ -340,6 +455,73 @@ export function ProductInfo({ product, dict, customizationFields, onVariantChang
               : dict.addToCart}
         </button>
       </div>
+
+      {/* Conversion-page trust block — shown after the customer is ready
+          to commit. unitPrice projects what adding this item would do to
+          their progress toward free delivery, which is more persuasive
+          than the current cart total alone. */}
+      <FreeDeliveryProgress unitPrice={selectedVariant?.price} />
+      <TrustBadgesCluster compact />
+      <div className="pt-1">
+        <PaymentMethodsStrip compact centered={false} />
+      </div>
+
+      {/* Sticky mobile add-to-cart — pinned to the bottom of the
+          viewport on small screens once the inline button scrolls
+          out of view. Massive conversion win on mobile where customers
+          read description / reviews and forget the price is up top. */}
+      {stickyVisible && selectedVariant && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t px-3 py-2 sm:hidden"
+          style={{
+            background: "var(--bg-secondary)",
+            borderColor: "var(--bg-border)",
+            boxShadow: "0 -6px 18px rgba(0,0,0,0.35)",
+          }}
+        >
+          <div className="flex flex-col">
+            {onSale && (
+              <span
+                style={{
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: 10,
+                  color: "var(--white-faint)",
+                  textDecoration: "line-through",
+                  lineHeight: 1.1,
+                }}
+              >
+                {formatPrice(selectedVariant!.compare_at_price as number)}
+              </span>
+            )}
+            <span
+              style={{
+                fontFamily: "var(--font-montserrat)",
+                fontSize: "var(--text-base)",
+                fontWeight: 700,
+                color: onSale ? "#FF6B6B" : "var(--white)",
+                lineHeight: 1.1,
+              }}
+            >
+              {displayPrice !== null ? formatPrice(displayPrice) : ""}
+            </span>
+          </div>
+          <button
+            onClick={handleAddToCart}
+            disabled={addToCartDisabled}
+            className="btn-gold flex flex-1 items-center justify-center gap-2 rounded-md py-3 transition-all duration-300 disabled:opacity-40"
+            style={{
+              fontFamily: "var(--font-montserrat)",
+              fontWeight: "var(--weight-semibold)",
+              fontSize: "var(--text-sm)",
+              letterSpacing: "var(--tracking-wider)",
+              textTransform: "uppercase",
+            }}
+          >
+            <ShoppingCart size={16} />
+            {stockStatus === "out" ? dict.outOfStock : dict.addToCart}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

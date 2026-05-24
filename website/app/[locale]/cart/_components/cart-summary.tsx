@@ -4,6 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { PromoCodeBox, type PromoState } from "@/components/cart/promo-code-box";
+import { FreeDeliveryProgress } from "@/components/storefront/free-delivery-progress";
+import { TrustBadgesCluster } from "@/components/storefront/trust-badges-cluster";
+import { PaymentMethodsStrip } from "@/components/storefront/payment-methods-strip";
+import {
+  SHIPPING_RATE_PENCE,
+  FREE_DELIVERY_THRESHOLD_PENCE,
+} from "@/lib/shipping";
 
 interface CartSummaryProps {
   dict: {
@@ -17,9 +24,6 @@ interface CartSummaryProps {
   };
 }
 
-const SHIPPING_RATE = 399;
-const FREE_THRESHOLD = 3000;
-
 function formatPrice(pence: number): string {
   return `£${(pence / 100).toFixed(2)}`;
 }
@@ -28,7 +32,7 @@ export function CartSummary({ dict }: CartSummaryProps) {
   const { subtotal, totalItems } = useCart();
   const [promo, setPromo] = useState<PromoState | null>(null);
 
-  const baseShipping = subtotal >= FREE_THRESHOLD ? 0 : SHIPPING_RATE;
+  const baseShipping = subtotal >= FREE_DELIVERY_THRESHOLD_PENCE ? 0 : SHIPPING_RATE_PENCE;
   const freeShippingFromPromo = promo?.appliesToShipping ?? false;
   const shipping = freeShippingFromPromo ? 0 : baseShipping;
   const itemDiscount = freeShippingFromPromo ? 0 : Math.min(promo?.discountAmount ?? 0, subtotal);
@@ -52,6 +56,14 @@ export function CartSummary({ dict }: CartSummaryProps) {
       >
         {dict.title}
       </h2>
+
+      {/* Last-chance nudge — bar fills as customer adds items, flips to
+          "FREE delivery unlocked" once over £30. Sits above the totals
+          so it can still influence behaviour (add one more item) before
+          they read the bottom line. */}
+      <div className="mb-4">
+        <FreeDeliveryProgress />
+      </div>
 
       <div className="flex flex-col gap-3">
         <div className="flex justify-between">
@@ -124,6 +136,14 @@ export function CartSummary({ dict }: CartSummaryProps) {
       >
         {dict.continueShopping}
       </Link>
+
+      {/* Trust block at the bottom — last-second reassurance immediately
+          before the customer clicks Checkout. Compact variants so they
+          don't dwarf the totals. */}
+      <div className="mt-6 flex flex-col gap-3">
+        <TrustBadgesCluster compact />
+        <PaymentMethodsStrip compact />
+      </div>
     </div>
   );
 }

@@ -85,6 +85,13 @@ export interface AdminCategory {
   depth: number;
   sort_order: number;
   is_active: boolean;
+  /**
+   * "How to measure" guide inherited by every product in this category.
+   * Empty strings mean "no guide" — the PDP's Size & Fit section hides
+   * the measure-guide block when both are empty.
+   */
+  measure_guide_text?: string;
+  measure_guide_image_url?: string;
 }
 
 export const adminCategoryKeys = {

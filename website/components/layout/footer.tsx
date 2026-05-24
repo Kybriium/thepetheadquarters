@@ -9,6 +9,7 @@ import {
   triggerNativePrompt,
   usePwaInstall,
 } from "@/lib/pwa-install";
+import { PaymentMethodsStrip } from "@/components/storefront/payment-methods-strip";
 
 interface FooterProps {
   dict: {
@@ -199,9 +200,15 @@ export function Footer({ dict, navDict }: FooterProps) {
 
         {/* Bottom */}
         <div
-          className="mt-16 flex flex-col gap-4 pt-8"
+          className="mt-16 flex flex-col gap-5 pt-8"
           style={{ borderTop: "1px solid var(--bg-border)" }}
         >
+          {/* Payment-method badges — even on pages where checkout is
+              still a few clicks away, the sight of Visa/MC/Amex/Apple
+              Pay/Google Pay near the legal entity disclosure reinforces
+              "real shop, normal payments, nothing weird here". */}
+          <PaymentMethodsStrip compact centered={false} />
+
           {/* Companies Act 2006 s.82 disclosure */}
           {legal?.legal_name && (
             <p

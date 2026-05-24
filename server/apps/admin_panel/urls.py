@@ -5,6 +5,7 @@ from apps.admin_panel.views.orders import (
     AdminDropshipPendingView,
     AdminOrderCancelView,
     AdminOrderDetailView,
+    AdminOrderEmailCustomerView,
     AdminOrderForwardItemView,
     AdminOrderListView,
     AdminOrderNotesView,
@@ -43,7 +44,9 @@ from apps.admin_panel.views.suppliers import (
     AdminSupplierDetailView,
     AdminSupplierListView,
     AdminSupplierProductsView,
+    AdminSupplierProductDetailView,
     AdminSupplierPurchasesView,
+    AdminVariantSuppliersView,
 )
 from apps.admin_panel.views.purchase_orders import (
     AdminPurchaseOrderCancelView,
@@ -104,6 +107,14 @@ from apps.admin_panel.views.reports import (
     AdminVatReturnExportView,
     AdminVatReturnView,
 )
+from apps.admin_panel.views.finances import (
+    AdminExpenseDetailView,
+    AdminExpenseListView,
+    AdminExpenseReceiptFileView,
+    AdminExpenseReceiptView,
+    AdminFinancesExportView,
+    AdminFinancesOverviewView,
+)
 
 urlpatterns = [
     path("dashboard/", DashboardView.as_view()),
@@ -117,6 +128,7 @@ urlpatterns = [
     path("orders/<str:order_number>/cancel/", AdminOrderCancelView.as_view()),
     path("orders/<str:order_number>/refund/", AdminOrderRefundView.as_view()),
     path("orders/<str:order_number>/notes/", AdminOrderNotesView.as_view()),
+    path("orders/<str:order_number>/email/", AdminOrderEmailCustomerView.as_view()),
     path("orders/<str:order_number>/items/<uuid:item_id>/forward/", AdminOrderForwardItemView.as_view()),
 
     # Products
@@ -151,6 +163,8 @@ urlpatterns = [
     path("suppliers/<uuid:supplier_id>/", AdminSupplierDetailView.as_view()),
     path("suppliers/<uuid:supplier_id>/products/", AdminSupplierProductsView.as_view()),
     path("suppliers/<uuid:supplier_id>/purchases/", AdminSupplierPurchasesView.as_view()),
+    path("variants/<uuid:variant_id>/suppliers/", AdminVariantSuppliersView.as_view()),
+    path("supplier-products/<uuid:sp_id>/", AdminSupplierProductDetailView.as_view()),
 
     # Purchase Orders
     path("purchase-orders/", AdminPurchaseOrderListView.as_view()),
@@ -216,4 +230,12 @@ urlpatterns = [
     path("reports/vat-return/", AdminVatReturnView.as_view()),
     path("reports/vat-return/export/", AdminVatReturnExportView.as_view()),
     path("reports/promotions/", AdminPromotionsReportView.as_view()),
+
+    # Finances (expense ledger + P&L overview + year-end CSV)
+    path("finances/overview/", AdminFinancesOverviewView.as_view()),
+    path("finances/export/", AdminFinancesExportView.as_view()),
+    path("expenses/", AdminExpenseListView.as_view()),
+    path("expenses/<uuid:expense_id>/", AdminExpenseDetailView.as_view()),
+    path("expenses/<uuid:expense_id>/receipt/", AdminExpenseReceiptView.as_view()),
+    path("expenses/<uuid:expense_id>/receipt/file/", AdminExpenseReceiptFileView.as_view()),
 ]

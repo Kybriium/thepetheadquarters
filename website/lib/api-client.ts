@@ -109,7 +109,7 @@ class ApiClient {
           const err = await retry.json().catch(() => ({}));
           throw new ApiError(retry.status, err.code || `API request failed`, err);
         }
-        return retry.json();
+        return parseBody<T>(retry);
       }
     }
 
@@ -118,7 +118,7 @@ class ApiClient {
       throw new ApiError(response.status, err.code || `API request failed`, err);
     }
 
-    return response.json();
+    return parseBody<T>(response);
   }
 
   async getPaginated<T>(url: string, params?: Record<string, string>): Promise<PaginatedResponse<T>> {
@@ -128,6 +128,35 @@ class ApiClient {
   async getSuccess<T>(url: string, params?: Record<string, string>): Promise<T> {
     const response = await this.get<SuccessResponse<T>>(url, params);
     return response.data;
+  }
+}
+
+/**
+ * Parse a successful fetch Response body, tolerating empty / non-JSON
+ * payloads. DRF returns 204 No Content with no body for delete actions
+ * and some idempotent endpoints; calling `.json()` directly on those
+ * throws SyntaxError, which previously surfaced to users as "Failed to
+ * delete" even though the server-side mutation had already succeeded.
+ *
+ * Returns undefined-as-T when there's nothing to parse, so callers
+ * that don't care about the body (DELETE, 204s) continue to work.
+ */
+async function parseBody<T>(response: Response): Promise<T> {
+  if (response.status === 204 || response.status === 205) {
+    return undefined as unknown as T;
+  }
+  // Some intermediaries strip Content-Length on chunked responses, so
+  // we can't rely on it being present. Try the text first, only parse
+  // when there's actually something there.
+  const text = await response.text();
+  if (!text) {
+    return undefined as unknown as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // Non-JSON success body (very rare in our API) — return the raw text.
+    return text as unknown as T;
   }
 }
 

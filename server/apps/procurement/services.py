@@ -120,6 +120,19 @@ def receive_purchase_order_items(po, item_quantities, user=None):
         po.status = PurchaseOrder.Status.PARTIAL
     po.save(update_fields=["status", "received_at"])
 
+    # Auto-record / refresh the cogs_inventory Expense for this PO so
+    # the Finances ledger reflects the inventory spend. Recomputed from
+    # PO items each call, so partial receipts update the row as more
+    # stock lands.
+    try:
+        from apps.expenses.services import record_inventory_purchase_cogs
+        record_inventory_purchase_cogs(po)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            "Failed to record inventory COGS for PO %s", po.id
+        )
+
     return po
 
 

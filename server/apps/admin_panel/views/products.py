@@ -163,7 +163,16 @@ class AdminProductDetailView(AdminBaseView):
 
         data = serializer.validated_data
 
-        for field in ["brand_id", "fulfillment_type", "is_featured", "is_active", "meta_title", "meta_description"]:
+        for field in [
+            "brand_id",
+            "fulfillment_type",
+            "is_featured",
+            "is_active",
+            "meta_title",
+            "meta_description",
+            "size_chart",
+            "fit_notes",
+        ]:
             if field in data:
                 setattr(product, field, data[field])
 

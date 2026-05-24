@@ -541,6 +541,16 @@ def fulfill_order(session):
     logger.info("Order %s created successfully.", order.order_number)
     send_order_confirmation_email(order)
 
+    # Auto-record the Stripe fee for this order so the Finances ledger
+    # reflects the real net revenue, not the gross. Best-effort: any
+    # API failure is logged inside record_stripe_fee_for_order and does
+    # not break order fulfillment.
+    try:
+        from apps.expenses.services import record_stripe_fee_for_order
+        record_stripe_fee_for_order(order)
+    except Exception:
+        logger.exception("Stripe-fee expense recording failed for %s", order.order_number)
+
     # Notify admin via configured integrations (Telegram). Fire-and-forget;
     # never blocks order completion. Lazy import keeps the orders app
     # independent of apps.integrations at import time.
@@ -601,3 +611,77 @@ def send_order_confirmation_email(order):
         html_message=html_message,
         fail_silently=True,
     )
+
+
+def send_admin_message_to_customer(order, *, subject: str, body: str, sent_by=None) -> bool:
+    """
+    Send an arbitrary admin message to the customer associated with an
+    order. From: DEFAULT_FROM_EMAIL (the company address — must be on a
+    verified Resend domain in production). Reply-To: same address so
+    customer replies land in the support inbox.
+
+    Returns True on success, False on failure. Caller decides whether
+    failure should be a hard error or surfaced as a soft warning.
+    """
+    from django.core.mail import EmailMultiAlternatives
+
+    subject = (subject or "").strip()
+    body = (body or "").strip()
+    if not subject or not body:
+        return False
+
+    # Pull a friendly first name from the shipping snapshot — falls back
+    # to nothing rather than "Hi None,".
+    first_name = ""
+    if order.shipping_full_name:
+        first_name = order.shipping_full_name.split()[0]
+
+    site_name = "The Pet Headquarters"
+    reply_to = settings.DEFAULT_FROM_EMAIL
+    order_url = f"{settings.FRONTEND_URL}/account/orders/{order.order_number}"
+
+    context = {
+        "order": order,
+        "customer_first_name": first_name,
+        "body": body,
+        "site_name": site_name,
+        "order_url": order_url,
+        "reply_to": reply_to,
+    }
+
+    if _is_console_backend:
+        logger.info(
+            "\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "  ✉️  Admin → Customer — %s\n"
+            "  Subject: %s\n"
+            "  📬 %s\n"
+            "  Body:\n%s\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            order.order_number,
+            subject,
+            order.email,
+            body,
+        )
+        return True
+
+    html_message = render_to_string("orders/emails/admin_message.html", context)
+    plain_message = render_to_string("orders/emails/admin_message.txt", context)
+
+    try:
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[order.email],
+            reply_to=[reply_to],
+        )
+        msg.attach_alternative(html_message, "text/html")
+        msg.send(fail_silently=False)
+        return True
+    except Exception:
+        logger.exception(
+            "Admin-message email failed for order %s (subject=%s, sent_by=%s)",
+            order.order_number, subject, getattr(sent_by, "email", None),
+        )
+        return False

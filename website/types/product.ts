@@ -11,6 +11,12 @@ export interface Product {
   primary_image_alt: string;
   min_price: number | null;
   max_price: number | null;
+  /**
+   * Compare-at price of the cheapest variant when on sale. Returned as
+   * null when the product has no discount (storefront renders the
+   * "SAVE £X / -N%" sale badge based on this).
+   */
+  min_compare_at_price: number | null;
   in_stock: boolean;
 }
 
@@ -18,6 +24,27 @@ export interface ProductBrandRef {
   id: string;
   slug: string;
   name: string;
+}
+
+/**
+ * Optional size table populated by the admin per product. Empty shape
+ * (no columns / no rows) means the product doesn't ship with sizing
+ * info and the PDP hides the Size & Fit block entirely.
+ */
+export interface ProductSizeChart {
+  columns?: string[];
+  rows?: string[][];
+}
+
+/**
+ * Category-level "how to measure" guide propagated onto every product
+ * in that category. The backend already picks the first associated
+ * category and inlines it on the detail response, so the frontend
+ * doesn't need a second request.
+ */
+export interface ProductMeasureGuide {
+  text: string;
+  image_url: string;
 }
 
 export interface ProductDetail extends Product {
@@ -31,6 +58,9 @@ export interface ProductDetail extends Product {
   category_ids: string[];
   is_customizable: boolean;
   option_types: ProductOptionType[];
+  size_chart?: ProductSizeChart;
+  fit_notes?: string;
+  measure_guide?: ProductMeasureGuide | null;
 }
 
 export interface ProductTranslation {

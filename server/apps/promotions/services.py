@@ -124,13 +124,20 @@ def validate_code(
     if cart_subtotal < promotion.min_subtotal:
         raise PromotionError("promo.min_subtotal")
 
-    # First-order-only check (only meaningful for authenticated users with prior orders)
-    if promotion.is_first_order_only and user and user.is_authenticated:
+    # First-order-only check — must cover BOTH authenticated users and
+    # guests checking out with an email that has prior orders, otherwise
+    # a logged-out customer could just clear cookies and reapply a
+    # "first order" discount on every order. We look up prior orders by
+    # user OR by email.
+    if promotion.is_first_order_only:
         from apps.orders.models import Order
-        prior = Order.objects.filter(user=user).exclude(
-            status=Order.Status.CANCELLED
-        ).exists()
-        if prior:
+        prior_qs = Order.objects.exclude(status=Order.Status.CANCELLED)
+        has_prior = False
+        if user and user.is_authenticated:
+            has_prior = prior_qs.filter(user=user).exists()
+        if not has_prior and email:
+            has_prior = prior_qs.filter(email__iexact=email).exists()
+        if has_prior:
             raise PromotionError("promo.first_order_only")
 
     # Per-user cap

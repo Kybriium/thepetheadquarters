@@ -221,3 +221,122 @@ class OrderHistoryView(APIView):
         serializer = OrderListSerializer(page, many=True)
 
         return paginator.get_paginated_response(serializer.data)
+
+
+class SyncOrderBySessionView(APIView):
+    """
+    Fallback used by the storefront success page when the Stripe webhook
+    is delayed or missed. POST with no body, just the session_id in the
+    path. Behaviour:
+
+      1. If we already have the order locally (webhook landed first or
+         a previous sync call materialised it) → return it.
+      2. Otherwise, retrieve the session from Stripe directly. If Stripe
+         confirms `payment_status == 'paid'`, run `fulfill_order` ourselves
+         and return the freshly created order.
+      3. If Stripe says the session is not paid, return a 202 so the
+         storefront knows to keep waiting (vs. a 500 which it would
+         treat as a hard failure).
+
+    Idempotent — `fulfill_order` is already idempotent on
+    `stripe_checkout_session_id`, so it's safe to call multiple times
+    (e.g. webhook fires while a sync call is in flight).
+    """
+    authentication_classes: list = []
+    permission_classes: list = []
+
+    def post(self, request, session_id):
+        existing = Order.objects.filter(
+            stripe_checkout_session_id=session_id,
+        ).first()
+        if existing:
+            return success_response(OrderSerializer(existing).data)
+
+        try:
+            session = stripe.checkout.Session.retrieve(session_id)
+        except stripe.error.InvalidRequestError:
+            return error_response("checkout.session_not_found", status_code=404)
+        except stripe.error.StripeError:
+            logger.exception("Stripe session lookup failed for %s", session_id)
+            return error_response("checkout.stripe_error", status_code=502)
+
+        if session.payment_status != "paid":
+            # Not paid yet — tell the client it's still pending so it
+            # keeps polling rather than treating this as terminal.
+            return Response(
+                {"status": "pending", "code": "checkout.not_paid"},
+                status=202,
+            )
+
+        try:
+            order = fulfill_order(session)
+        except Exception:
+            logger.exception("Manual fulfill failed for session %s", session_id)
+            return error_response("checkout.fulfill_failed", status_code=500)
+
+        return success_response(OrderSerializer(order).data)
+
+
+class RecentActivityView(APIView):
+    """
+    Public anonymized feed of recent paid orders, used by the live-activity
+    toaster on the storefront. Returns just enough to render
+    "S. from Manchester ordered 'Premium Dog Treats' 4 min ago" without
+    exposing PII: first-name initial only, city only, single product name.
+
+    UK compliance note: data is real (no fabricated activity, which would
+    fall foul of the DMCC Act 2024 / CPRs 2008). The endpoint hides
+    customer email, surname, address and any free-text fields.
+    """
+    # Cache for 60s — toaster polls every few minutes, this keeps load low
+    # and prevents the same order appearing multiple times across visitors
+    # within a tight window.
+    authentication_classes: list = []
+    permission_classes: list = []
+
+    def get(self, request):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        # Window: last 14 days is the right balance — long enough to keep
+        # the feed alive for new shops, short enough that ancient orders
+        # don't feel stale to returning visitors.
+        since = timezone.now() - timedelta(days=14)
+
+        orders = (
+            Order.objects
+            .filter(
+                paid_at__isnull=False,
+                paid_at__gte=since,
+            )
+            .exclude(status=Order.Status.CANCELLED)
+            .prefetch_related("items__product")
+            .order_by("-paid_at")[:30]
+        )
+
+        items: list[dict] = []
+        for o in orders:
+            # First name initial only — "Sarah Smith" → "S."
+            full_name = (o.shipping_full_name or "").strip()
+            first_part = full_name.split(" ")[0] if full_name else ""
+            initial = f"{first_part[:1].upper()}." if first_part else "Someone"
+
+            first_item = o.items.first()
+            if not first_item or not first_item.product:
+                continue
+
+            primary_image = first_item.product.images.filter(is_primary=True).first()
+            items.append({
+                "id": str(o.id),
+                "buyer_initial": initial,
+                "city": o.shipping_city or "the UK",
+                "product_name": first_item.product_name or first_item.product.slug,
+                "product_slug": first_item.product.slug,
+                "product_image": primary_image.url if primary_image else None,
+                "paid_at": o.paid_at.isoformat(),
+            })
+
+        response = success_response(data=items)
+        # Browser cache 60s — toaster picks up new orders within a minute.
+        response["Cache-Control"] = "public, max-age=60"
+        return response

@@ -4,7 +4,6 @@ import type { Brand } from "@/types/brand";
 
 interface BrandsSectionProps {
   dict: {
-    label: string;
     title: string;
   };
   brands: Brand[];
@@ -14,46 +13,44 @@ export function BrandsSection({ dict, brands }: BrandsSectionProps) {
   if (brands.length === 0) return null;
 
   return (
-    <section className="py-16 md:py-24" style={{ background: "var(--bg-secondary)" }}>
+    <section className="py-10 md:py-14" style={{ background: "var(--bg-secondary)" }}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mb-8 text-center md:mb-12" data-animate="fade-up">
-          <span
-            className="mb-4 block"
-            style={{
-              fontFamily: "var(--font-montserrat)",
-              fontSize: "var(--text-xs)",
-              letterSpacing: "var(--tracking-widest)",
-              textTransform: "uppercase",
-              color: "var(--gold-dark)",
-            }}
-          >
-            {dict.label}
-          </span>
+        <div className="mb-6 flex items-baseline justify-between">
           <h2
             style={{
               fontFamily: "var(--font-cormorant)",
-              fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
-              fontWeight: "var(--weight-regular)",
+              fontSize: "clamp(1.25rem, 3vw, 1.75rem)",
+              fontWeight: "var(--weight-medium)",
               color: "var(--white)",
-              letterSpacing: "var(--tracking-tight)",
             }}
           >
             {dict.title}
           </h2>
-          <div
-            className="mx-auto mt-4"
-            data-animate="divider"
-            style={{ width: 60, height: 1, background: "var(--gold)" }}
-          />
+          <Link
+            href="/brands"
+            className="hover:text-[var(--gold)]"
+            style={{
+              fontFamily: "var(--font-montserrat)",
+              fontSize: "var(--text-xs)",
+              color: "var(--gold-dark)",
+              letterSpacing: "var(--tracking-wider)",
+              textTransform: "uppercase",
+            }}
+          >
+            View all →
+          </Link>
         </div>
 
-        <div className="grid grid-cols-2 items-center justify-items-center gap-6 sm:flex sm:flex-wrap sm:justify-center sm:gap-10" data-animate="stagger">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {brands.map((brand) => (
             <Link
               key={brand.id}
               href={`/brands/${brand.slug}`}
-              className="transition-opacity duration-300 hover:opacity-100"
-              style={{ opacity: 0.6 }}
+              className="group flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-lg p-3 transition-all duration-300 hover:-translate-y-0.5"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid var(--bg-border)",
+              }}
             >
               {brand.logo ? (
                 <Image
@@ -61,24 +58,34 @@ export function BrandsSection({ dict, brands }: BrandsSectionProps) {
                   alt={brand.name}
                   width={200}
                   height={80}
-                  sizes="(max-width: 640px) 32px, 48px"
-                  className="h-8 w-auto object-contain sm:h-12"
-                  style={{ filter: "brightness(0)" }}
+                  sizes="(max-width: 640px) 40vw, 200px"
+                  className="max-h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
                 <span
                   style={{
-                    fontFamily: "var(--font-montserrat)",
-                    fontSize: "var(--text-sm)",
+                    fontFamily: "var(--font-cormorant)",
+                    fontSize: "var(--text-xl)",
                     fontWeight: "var(--weight-medium)",
-                    color: "var(--white-dim)",
-                    letterSpacing: "var(--tracking-wider)",
-                    textTransform: "uppercase",
+                    color: "#0F0F12",
+                    letterSpacing: "var(--tracking-wide)",
                   }}
                 >
-                  {brand.name}
+                  {brand.name.slice(0, 1).toUpperCase()}
                 </span>
               )}
+              <span
+                className="text-center"
+                style={{
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#3A3A40",
+                  letterSpacing: "var(--tracking-wide)",
+                }}
+              >
+                {brand.name}
+              </span>
             </Link>
           ))}
         </div>

@@ -20,7 +20,10 @@ class AdminImageUploadView(AdminBaseView):
         folder = request.data.get("folder", "products")
 
         try:
-            result = upload_image(file, folder=folder)
+            # Pass the request so the local-storage path can build
+            # an absolute URL — without that the response URL is
+            # relative and downstream URLField validation fails.
+            result = upload_image(file, folder=folder, request=request)
         except UploadError as e:
             return error_response(e.code)
 

@@ -30,6 +30,66 @@ def _resolve_product(slug: str):
         return None
 
 
+def _display_name(user) -> str:
+    """First name + last initial, e.g. 'Sarah M.'. Used by RecentReviewsView."""
+    if not user:
+        return "Anonymous"
+    first = (user.first_name or "").strip()
+    last = (user.last_name or "").strip()
+    if first and last:
+        return f"{first} {last[0].upper()}."
+    if first:
+        return first
+    if user.email:
+        return user.email.split("@")[0]
+    return "Anonymous"
+
+
+class RecentReviewsView(APIView):
+    """
+    `GET /api/v1/reviews/recent/` — last N visible reviews across the whole
+    catalog. Used on the landing page as a social-proof section. 4+ star
+    only by default so we don't surface negative reviews as marketing.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 6)), 20))
+        except ValueError:
+            limit = 6
+        try:
+            min_rating = max(1, min(int(request.query_params.get("min_rating", 4)), 5))
+        except ValueError:
+            min_rating = 4
+
+        reviews = (
+            Review.objects
+            .filter(is_visible=True, rating__gte=min_rating)
+            .filter(product__is_active=True)
+            .select_related("product", "user")
+            .prefetch_related("product__translations")
+            .order_by("-created_at")[:limit]
+        )
+
+        data = []
+        for r in reviews:
+            translation = r.product.translations.filter(language="en").first()
+            data.append({
+                "id": str(r.id),
+                "rating": r.rating,
+                "title": r.title,
+                "body": r.body,
+                "display_name": _display_name(r.user),
+                "is_verified_buyer": r.order_id is not None,
+                "created_at": r.created_at.isoformat(),
+                "product_name": translation.name if translation else "",
+                "product_slug": r.product.slug,
+            })
+        return success_response(data=data)
+
+
 def _serializer_context(request, page):
     """
     Build the serializer context with the user's helpful-vote set

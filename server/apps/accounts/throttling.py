@@ -6,7 +6,11 @@ class RegisterThrottle(AnonRateThrottle):
 
 
 class LoginThrottle(AnonRateThrottle):
-    rate = "10/minute"
+    # 10/min was hitting innocent users behind NAT and shared-IP
+    # offices. 60/min still makes online brute-force useless (any
+    # password of even moderate strength takes years to crack at this
+    # rate) while accommodating CI/test suites + retried form submits.
+    rate = "60/minute"
 
 
 class TokenRefreshThrottle(AnonRateThrottle):

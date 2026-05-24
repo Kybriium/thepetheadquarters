@@ -1,35 +1,21 @@
 {
   "hero": {
-    "badge": "Premium Pet Products",
-    "title": "Everything Your Pet Deserves",
-    "subtitle": "Carefully curated products for your beloved companions. Quality you can trust, delivered to your door.",
+    "title": "Food, treats & toys for the pet you love",
+    "subtitle": "Top UK brands. Free delivery over £30. With you in 2–4 working days.",
     "cta": "Shop Now",
     "ctaSecondary": "Explore Categories"
   },
   "categories": {
-    "label": "Shop by Category",
-    "title": "Find What They Need"
+    "title": "Shop by pet"
   },
   "featured": {
-    "label": "Handpicked for You",
-    "title": "Featured Products"
-  },
-  "trust": {
-    "label": "Why Choose Us",
-    "items": [
-      { "title": "Secure Checkout", "description": "Protected payments, every time" },
-      { "title": "Vet Approved", "description": "Products trusted by professionals" },
-      { "title": "UK Based", "description": "Nationwide shipping from the UK" },
-      { "title": "Customer First", "description": "Dedicated support when you need it" }
-    ]
+    "title": "Top picks"
   },
   "brands": {
-    "label": "Our Brands",
-    "title": "Trusted by Pet Owners"
+    "title": "Browse by brand"
   },
   "newArrivals": {
-    "label": "Just Arrived",
-    "title": "New Products"
+    "title": "New arrivals"
   },
   "newsletter": {
     "label": "Stay Updated",

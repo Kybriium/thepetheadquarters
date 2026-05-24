@@ -12,6 +12,21 @@ function formatPrice(pence: number): string {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  // Sale calc — guard against null and equal/lower compare-at values so
+  // we never render a fake discount. Backend already nulls these out
+  // when they don't represent a real saving, but we double-check here
+  // to keep this component honest in isolation.
+  const onSale =
+    product.min_price !== null &&
+    product.min_compare_at_price !== null &&
+    product.min_compare_at_price > product.min_price;
+  const saveAmount = onSale
+    ? (product.min_compare_at_price as number) - (product.min_price as number)
+    : 0;
+  const savePercent = onSale
+    ? Math.round((saveAmount / (product.min_compare_at_price as number)) * 100)
+    : 0;
+
   return (
     <Link
       href={`/products/${product.slug}`}
@@ -44,11 +59,31 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
+        {/* Aggressive sale badge — top-left, red, with savings amount.
+            Outranks the out-of-stock badge intentionally: if the item is
+            on sale AND out of stock we'd rather highlight the price drop
+            so the customer reaches the PDP and sees full context. */}
+        {onSale && (
+          <span
+            className="absolute left-2 top-2 flex items-center gap-1 rounded-md px-2 py-1 shadow-sm sm:left-3 sm:top-3"
+            style={{
+              background: "#D62828",
+              color: "#FFFFFF",
+              fontFamily: "var(--font-montserrat)",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "var(--tracking-wide)",
+            }}
+          >
+            SAVE {formatPrice(saveAmount)}
+          </span>
+        )}
+
         {!product.in_stock && (
           <span
-            className="absolute left-2 top-2 rounded-full px-2 py-0.5 sm:left-3 sm:top-3 sm:px-3 sm:py-1"
+            className="absolute right-2 top-2 rounded-full px-2 py-0.5 sm:right-3 sm:top-3 sm:px-3 sm:py-1"
             style={{
-              background: "var(--error)",
+              background: "rgba(0,0,0,0.7)",
               color: "#FFFFFF",
               fontFamily: "var(--font-montserrat)",
               fontSize: "var(--text-xs)",
@@ -84,20 +119,48 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        <div className="flex items-baseline gap-2">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           {product.min_price !== null && (
             <span
               style={{
                 fontFamily: "var(--font-montserrat)",
                 fontSize: "clamp(0.875rem, 2vw, 1.125rem)",
-                fontWeight: "var(--weight-semibold)",
-                color: "var(--white)",
+                fontWeight: "var(--weight-bold)",
+                color: onSale ? "#FF6B6B" : "var(--white)",
               }}
             >
               {product.min_price === product.max_price
                 ? formatPrice(product.min_price)
                 : `${formatPrice(product.min_price)} – ${formatPrice(product.max_price!)}`}
             </span>
+          )}
+
+          {onSale && (
+            <>
+              <span
+                style={{
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: "clamp(0.75rem, 1.6vw, 0.9rem)",
+                  color: "var(--white-faint)",
+                  textDecoration: "line-through",
+                }}
+              >
+                {formatPrice(product.min_compare_at_price as number)}
+              </span>
+              <span
+                className="rounded-sm px-1 py-0.5"
+                style={{
+                  background: "#D62828",
+                  color: "#FFFFFF",
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                −{savePercent}%
+              </span>
+            </>
           )}
         </div>
       </div>

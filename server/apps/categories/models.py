@@ -17,6 +17,27 @@ class Category(BaseModel, SlugMixin, SortableMixin, ActivatableMixin):
     meta_title = models.CharField(max_length=255, blank=True, default="")
     meta_description = models.CharField(max_length=500, blank=True, default="")
 
+    # Measuring guide — one per category, shown on every product PDP in
+    # this category to explain how the customer should measure their
+    # pet for sizing. Optional; PDP hides the block when empty.
+    #
+    # Diagram is a single image URL (typically a labelled illustration
+    # of where to take the neck / chest / length measurement). Stored
+    # as URL rather than upload because most categories share standard
+    # diagrams that already exist online.
+    measure_guide_text = models.TextField(
+        blank=True,
+        default="",
+        help_text="Plain text instructions, one tip per line "
+        "(e.g. 'Neck: measure where the collar sits, snug but not tight').",
+    )
+    measure_guide_image_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Optional diagram showing where to measure the pet.",
+    )
+
     class Meta(BaseModel.Meta):
         verbose_name_plural = "categories"
         ordering = ["sort_order", "path"]

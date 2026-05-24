@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     MyReviewsView,
+    RecentReviewsView,
     ReviewDetailView,
     ReviewEligibilityView,
     ReviewHelpfulView,
@@ -10,6 +11,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("reviews/recent/", RecentReviewsView.as_view()),
     path("products/<slug:slug>/reviews/", ReviewListCreateView.as_view()),
     path("products/<slug:slug>/reviews/stats/", ReviewStatsView.as_view()),
     path("products/<slug:slug>/reviews/eligibility/", ReviewEligibilityView.as_view()),

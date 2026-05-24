@@ -21,6 +21,39 @@ class Product(BaseModel, SlugMixin, ActivatableMixin):
     meta_title = models.CharField(max_length=255, blank=True, default="")
     meta_description = models.CharField(max_length=500, blank=True, default="")
 
+    # ---- Size & fit (optional) ---------------------------------------
+    # Free-form admin-entered size chart. Designed to be flexible so the
+    # same field works for collars, harnesses, coats, beds — any product
+    # where measurements matter. The frontend renders this as a styled
+    # table on the PDP when populated.
+    #
+    # Expected shape:
+    #   {
+    #     "columns": ["Size", "Neck (cm)", "Chest (cm)", "Weight (kg)"],
+    #     "rows": [
+    #       ["XS", "20-25", "30-35", "2-4"],
+    #       ["S",  "25-30", "35-45", "4-8"]
+    #     ]
+    #   }
+    #
+    # Empty {} means "no chart", which is the default — the PDP hides
+    # the size & fit block entirely in that case. Per-variant numeric
+    # measurements live on ProductVariant (added later) and are
+    # complementary, not a replacement.
+    size_chart = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Optional size table. Shape: {columns: [...], rows: [[...]]}. "
+        "See model docstring for example.",
+    )
+    fit_notes = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="Short note shown under the size chart (e.g. 'Runs small — "
+        "size up for thick-furred dogs').",
+    )
+
     class Meta(BaseModel.Meta):
         indexes = [
             models.Index(fields=["brand_id", "is_active"]),

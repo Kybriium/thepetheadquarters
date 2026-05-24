@@ -10,6 +10,9 @@ import { ScrollAnimations } from "@/components/scroll-animations";
 import { PageLoader } from "@/components/page-loader";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { UspRibbon } from "@/components/storefront/usp-ribbon";
+import { LiveActivityToaster } from "@/components/storefront/live-activity-toaster";
+import { FirstOrderBanner } from "@/components/storefront/first-order-banner";
 
 import "../globals.css";
 
@@ -145,8 +148,20 @@ export default async function LocaleLayout({
       <body>
         <PageLoader />
         <Providers>
+          {/* Promo strip pinned to the very top of every page — distinct
+              red so it doesn't compete with the gold USP ribbon below
+              the header. Dismissible per session. */}
+          <FirstOrderBanner />
           <Header dict={common.nav} />
+          {/* Site-wide value-prop strip — visible on every page right
+              under the header. Reassures first-time visitors instantly
+              about delivery, security, ratings and support. */}
+          <UspRibbon />
           {children}
+          {/* Live recent-purchase toaster — bottom-left corner, real
+              anonymized orders only. Hides itself on checkout/account
+              paths and when there's no recent activity. */}
+          <LiveActivityToaster />
           <Footer dict={common.footer} navDict={common.nav} />
         </Providers>
         <ToastContainer />

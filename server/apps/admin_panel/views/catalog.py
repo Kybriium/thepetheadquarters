@@ -45,6 +45,10 @@ class AdminCategorySerializer(serializers.ModelSerializer):
             "id", "slug", "name", "description", "image",
             "parent", "depth", "path", "sort_order", "is_active",
             "meta_title", "meta_description",
+            # Surfaced so the admin category edit page can show + save
+            # the "How to measure" guide that the storefront PDP picks
+            # up for every product in the category.
+            "measure_guide_text", "measure_guide_image_url",
         ]
 
     def get_name(self, obj):
@@ -161,12 +165,29 @@ class AdminCategoryDetailView(AdminBaseView):
         except Category.DoesNotExist:
             return None
 
+    def get(self, request, category_id):
+        """Single-category fetch — used by the admin category edit
+        page so it doesn't have to load + filter the entire tree."""
+        category = self._get(category_id)
+        if not category:
+            return error_response("admin.categories.not_found", status_code=404)
+        return success_response(data=AdminCategorySerializer(category).data)
+
     def patch(self, request, category_id):
         category = self._get(category_id)
         if not category:
             return error_response("admin.categories.not_found", status_code=404)
 
-        for field in ["image", "sort_order", "is_active", "parent_id", "meta_title", "meta_description"]:
+        for field in [
+            "image",
+            "sort_order",
+            "is_active",
+            "parent_id",
+            "meta_title",
+            "meta_description",
+            "measure_guide_text",
+            "measure_guide_image_url",
+        ]:
             if field in request.data:
                 setattr(category, field, request.data[field])
 

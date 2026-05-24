@@ -60,6 +60,10 @@ export function LegalPage({ data, backLabel, backHref }: LegalPageProps) {
                   fontSize: "var(--text-sm)",
                   color: "var(--white-dim)",
                   lineHeight: "var(--leading-relaxed)",
+                  // Preserve newlines in the legal dictionary so the
+                  // subprocessor list, retention bullets, etc. render
+                  // as separate lines rather than collapsing into prose.
+                  whiteSpace: "pre-line",
                 }}
               >
                 {section.content}

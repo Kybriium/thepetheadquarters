@@ -9,13 +9,14 @@ import { getRootCategories } from "@/hooks/categories.server";
 import { getFeaturedProducts, getNewArrivals } from "@/hooks/products.server";
 import { getBrands } from "@/hooks/brands.server";
 
-import { HeroSection } from "./_components/hero-section";
 import { CategoriesSection } from "./_components/categories-section";
 import { FeaturedProductsSection } from "./_components/featured-products-section";
-import { TrustSignalsSection } from "./_components/trust-signals-section";
 import { BrandsSection } from "./_components/brands-section";
 import { NewArrivalsSection } from "./_components/new-arrivals-section";
 import { NewsletterSection } from "./_components/newsletter-section";
+import { RecentReviewsSection } from "./_components/recent-reviews-section";
+import { RecentlyViewedSection } from "./_components/recently-viewed-section";
+import { getRecentReviews } from "@/hooks/recent-reviews.server";
 
 export const metadata: Metadata = {
   title: "Premium Pet Supplies & Food — Free UK Delivery",
@@ -87,18 +88,22 @@ export default async function Home({
   const { locale } = await params;
   const home = await getDictionary(locale, "home");
 
-  const [categories, featuredProducts, newArrivals, brands] = await Promise.allSettled([
+  const [categories, featuredProducts, newArrivals, brands, recentReviews] = await Promise.allSettled([
     getRootCategories(locale),
     getFeaturedProducts(locale),
     getNewArrivals(locale),
     getBrands(locale),
+    getRecentReviews(6),
   ]);
 
+  // Marketplace layout (Amazon/Temu-style): no hero, no marketing copy,
+  // no decorative trust theatre. The USP ribbon under the header is the
+  // only above-the-fold reassurance (Secure checkout / Free over £30 /
+  // Delivery estimate at checkout). Everything below it is products.
   return (
     <main>
       <JsonLd data={organizationJsonLd} />
       <JsonLd data={websiteJsonLd} />
-      <HeroSection dict={home.hero} />
       <CategoriesSection
         dict={home.categories}
         categories={categories.status === "fulfilled" ? categories.value : []}
@@ -107,14 +112,17 @@ export default async function Home({
         dict={home.featured}
         products={featuredProducts.status === "fulfilled" ? featuredProducts.value : []}
       />
-      <TrustSignalsSection dict={home.trust} />
-      <BrandsSection
-        dict={home.brands}
-        brands={brands.status === "fulfilled" ? brands.value : []}
-      />
       <NewArrivalsSection
         dict={home.newArrivals}
         products={newArrivals.status === "fulfilled" ? newArrivals.value : []}
+      />
+      <RecentlyViewedSection />
+      <RecentReviewsSection
+        reviews={recentReviews.status === "fulfilled" ? recentReviews.value : []}
+      />
+      <BrandsSection
+        dict={home.brands}
+        brands={brands.status === "fulfilled" ? brands.value : []}
       />
       <NewsletterSection dict={home.newsletter} />
     </main>

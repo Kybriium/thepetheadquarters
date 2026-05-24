@@ -1,0 +1,24 @@
+# Build plan for Railway / Nixpacks.
+# Pins Python 3.13 (matches .python-version) and installs deps with `uv`,
+# which is much faster than pip and matches local dev exactly via uv.lock.
+
+[variables]
+PYTHON_VERSION = "3.13"
+
+[phases.setup]
+nixPkgs = ["python313", "uv"]
+
+[phases.install]
+# --frozen guarantees we install the exact pinned versions from uv.lock
+# (no drift between local and prod). --no-dev skips dev-only deps if any.
+cmds = ["uv sync --frozen --no-dev"]
+
+[phases.build]
+# Nothing to do here. `collectstatic` runs in the Procfile `release` phase
+# so it has access to env vars (DATABASE_URL etc) that aren't set at
+# image-build time.
+cmds = []
+
+[start]
+# Procfile's `web:` line wins — this is just a Nixpacks fallback.
+cmd = "uv run gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 3 --timeout 60"

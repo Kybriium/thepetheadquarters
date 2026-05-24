@@ -14,6 +14,12 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-change-me-in-p
 DEBUG = config("DJANGO_DEBUG", default=DJANGO_ENV == "development", cast=bool)
 
 ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+# Railway auto-injects RAILWAY_PUBLIC_DOMAIN per deploy (e.g.
+# `myapp-production.up.railway.app`). Append it so we don't have to
+# remember to keep DJANGO_ALLOWED_HOSTS in sync after every redeploy.
+_railway_host = config("RAILWAY_PUBLIC_DOMAIN", default="")
+if _railway_host and _railway_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_host)
 
 # ---------------------------------------------------------------------------
 # Apps
@@ -60,6 +66,10 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # ---------------------------------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # WhiteNoise serves /static/ assets straight from Django so we don't
+    # need a separate CDN for admin/DRF assets in production. Must be
+    # the second middleware (right after SecurityMiddleware) per its docs.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -93,7 +103,22 @@ TEMPLATES = [
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-if config("DB_NAME", default=""):
+# Three modes, in priority order:
+#   1. DATABASE_URL (Railway, Render, Fly, Heroku) — parsed by dj-database-url
+#   2. Explicit DB_NAME/DB_USER/... env vars (self-managed Postgres)
+#   3. Local SQLite fallback (dev default — no env needed)
+import dj_database_url  # noqa: E402
+
+_db_url = config("DATABASE_URL", default="")
+if _db_url:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            _db_url,
+            conn_max_age=600,   # keep connections alive 10min (Railway closes idle ones)
+            ssl_require=DJANGO_ENV == "production",
+        )
+    }
+elif config("DB_NAME", default=""):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -230,9 +255,23 @@ USE_I18N = True
 USE_TZ = True
 
 # ---------------------------------------------------------------------------
-# Static
+# Static (served by WhiteNoise in production; runserver in dev)
 # ---------------------------------------------------------------------------
 STATIC_URL = "static/"
+# Where `manage.py collectstatic` writes the compiled bundle — Railway's
+# build step runs collectstatic and WhiteNoise serves out of here.
+STATIC_ROOT = BASE_DIR / "staticfiles"
+# CompressedManifestStaticFilesStorage adds content-hash filenames + gzip,
+# so /static/admin/css/base.css becomes /static/admin/css/base.abc123.css
+# and gets a year-long cache header. Survives deploys without cache busting.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # ---------------------------------------------------------------------------
 # Media (uploaded files)
@@ -305,6 +344,11 @@ CSRF_TRUSTED_ORIGINS = config(
     default="http://localhost:3000",
     cast=Csv(),
 )
+# Same Railway-host trick as ALLOWED_HOSTS — CSRF needs the full scheme.
+if _railway_host:
+    _railway_origin = f"https://{_railway_host}"
+    if _railway_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_railway_origin)
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
 
@@ -338,3 +382,14 @@ if DJANGO_ENV == "production":
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
+    # Railway terminates TLS at its edge proxy and forwards plain HTTP
+    # to the app with X-Forwarded-Proto: https. Without this header Django
+    # would think every request is insecure and reject secure-only cookies.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Send Secure-flag JWT cookies (auth cookies are set by
+    # apps.accounts.authentication — these toggles are the global flags).
+    SESSION_COOKIE_SAMESITE = "Lax"
+    # HSTS — only enable when you're 100% on HTTPS. Railway is. 1 year max-age.
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

@@ -2,9 +2,11 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Loader2, MapPin, AlertCircle } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { endpoints } from "@/config/endpoints";
 import { addressSchema, type AddressFormData } from "@/lib/validations/auth";
+import { formatUkPostcode, usePostcodeAutoFill } from "@/lib/postcode-lookup";
 import type { Address } from "@/types/auth";
 import type enAuth from "@/i18n/dictionaries/en/auth.json";
 
@@ -19,6 +21,9 @@ export function AddressForm({ dict, address, onSaved, onCancel }: AddressFormPro
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
@@ -38,11 +43,25 @@ export function AddressForm({ dict, address, onSaved, onCancel }: AddressFormPro
       : { country: "GB", is_default: false },
   });
 
+  const lookupStatus = usePostcodeAutoFill({
+    postcode: watch("postcode") || "",
+    setValue: (field, value, options) =>
+      setValue(field as keyof AddressFormData, value, options),
+    getValue: (field) => {
+      const v = getValues(field as keyof AddressFormData);
+      return typeof v === "string" ? v : "";
+    },
+  });
+
   async function onSubmit(data: AddressFormData) {
+    const payload: AddressFormData = {
+      ...data,
+      postcode: data.postcode ? formatUkPostcode(data.postcode) : data.postcode,
+    };
     if (address) {
-      await apiClient.patch(endpoints.addresses.detail(address.id), data);
+      await apiClient.patch(endpoints.addresses.detail(address.id), payload);
     } else {
-      await apiClient.post(endpoints.addresses.list, data);
+      await apiClient.post(endpoints.addresses.list, payload);
     }
     onSaved();
   }
@@ -78,39 +97,88 @@ export function AddressForm({ dict, address, onSaved, onCancel }: AddressFormPro
 
         <div>
           <label style={labelStyle}>{dict.addresses.fullName}</label>
-          <input {...register("full_name")} className="w-full outline-none" style={inputStyle(!!errors.full_name)} />
+          <input {...register("full_name")} autoComplete="name" className="w-full outline-none" style={inputStyle(!!errors.full_name)} />
+        </div>
+
+        {/* Postcode first — auto-fills city/county once a valid UK postcode is entered. */}
+        <div>
+          <label style={labelStyle}>{dict.addresses.postcode}</label>
+          <div className="relative">
+            <input
+              {...register("postcode")}
+              autoComplete="postal-code"
+              placeholder="e.g. SW1A 1AA"
+              onBlur={(e) => {
+                const formatted = formatUkPostcode(e.target.value);
+                if (formatted !== e.target.value) {
+                  setValue("postcode", formatted, { shouldValidate: true });
+                }
+              }}
+              className="w-full outline-none uppercase"
+              style={{
+                ...inputStyle(!!errors.postcode || lookupStatus === "not_found"),
+                paddingRight: 36,
+                textTransform: "uppercase",
+              }}
+            />
+            <span
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+              style={{
+                color:
+                  lookupStatus === "ok" ? "var(--success)"
+                  : lookupStatus === "not_found" ? "var(--error)"
+                  : "var(--white-faint)",
+              }}
+            >
+              {lookupStatus === "loading" && <Loader2 size={14} className="animate-spin" />}
+              {lookupStatus === "ok" && <Check size={14} />}
+              {lookupStatus === "not_found" && <AlertCircle size={14} />}
+              {lookupStatus === "idle" && <MapPin size={14} />}
+            </span>
+          </div>
+          {lookupStatus === "not_found" && (
+            <p style={{ fontFamily: "var(--font-montserrat)", fontSize: 11, color: "var(--error)", marginTop: "var(--space-1)" }}>
+              Couldn&apos;t find that postcode. Fill in city &amp; county manually.
+            </p>
+          )}
         </div>
 
         <div>
           <label style={labelStyle}>{dict.addresses.addressLine1}</label>
-          <input {...register("address_line_1")} className="w-full outline-none" style={inputStyle(!!errors.address_line_1)} />
+          <input
+            {...register("address_line_1")}
+            autoComplete="address-line1"
+            placeholder="House number and street"
+            className="w-full outline-none"
+            style={inputStyle(!!errors.address_line_1)}
+          />
         </div>
 
         <div>
           <label style={labelStyle}>{dict.addresses.addressLine2}</label>
-          <input {...register("address_line_2")} className="w-full outline-none" style={inputStyle(false)} />
+          <input
+            {...register("address_line_2")}
+            autoComplete="address-line2"
+            placeholder="Apartment, suite, etc. (optional)"
+            className="w-full outline-none"
+            style={inputStyle(false)}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label style={labelStyle}>{dict.addresses.city}</label>
-            <input {...register("city")} className="w-full outline-none" style={inputStyle(!!errors.city)} />
+            <input {...register("city")} autoComplete="address-level2" className="w-full outline-none" style={inputStyle(!!errors.city)} />
           </div>
           <div>
             <label style={labelStyle}>{dict.addresses.county}</label>
-            <input {...register("county")} className="w-full outline-none" style={inputStyle(false)} />
+            <input {...register("county")} autoComplete="address-level1" className="w-full outline-none" style={inputStyle(false)} />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label style={labelStyle}>{dict.addresses.postcode}</label>
-            <input {...register("postcode")} className="w-full outline-none" style={inputStyle(!!errors.postcode)} />
-          </div>
-          <div>
-            <label style={labelStyle}>{dict.addresses.phone}</label>
-            <input {...register("phone")} type="tel" className="w-full outline-none" style={inputStyle(false)} />
-          </div>
+        <div>
+          <label style={labelStyle}>{dict.addresses.phone}</label>
+          <input {...register("phone")} autoComplete="tel" type="tel" className="w-full outline-none" style={inputStyle(false)} />
         </div>
 
         <div className="flex items-center gap-3">

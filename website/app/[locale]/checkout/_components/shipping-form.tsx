@@ -3,7 +3,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Check, Loader2, MapPin, AlertCircle } from "lucide-react";
 import type { ShippingAddressData } from "@/lib/validations/checkout";
+import { formatUkPostcode, usePostcodeAutoFill } from "@/lib/postcode-lookup";
 import type enCheckout from "@/i18n/dictionaries/en/checkout.json";
 
 interface ShippingFormProps {
@@ -17,11 +19,11 @@ interface ShippingFormProps {
 const schema = z.object({
   email: z.string(),
   full_name: z.string().min(1, "checkout.full_name_required").max(255),
+  postcode: z.string().min(1, "checkout.postcode_required").max(10),
   address_line_1: z.string().min(1, "checkout.address_required").max(255),
   address_line_2: z.string().max(255),
   city: z.string().min(1, "checkout.city_required").max(100),
   county: z.string().max(100),
-  postcode: z.string().min(1, "checkout.postcode_required").max(10),
   country: z.string().length(2),
   phone: z.string().max(20),
 });
@@ -33,6 +35,9 @@ export function ShippingForm({ dict, isGuest, defaultEmail, onSubmit, onBack }: 
     register,
     handleSubmit,
     setError,
+    setValue,
+    getValues,
+    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -40,13 +45,20 @@ export function ShippingForm({ dict, isGuest, defaultEmail, onSubmit, onBack }: 
       email: defaultEmail || "",
       country: "GB",
       full_name: "",
+      postcode: "",
       address_line_1: "",
       address_line_2: "",
       city: "",
       county: "",
-      postcode: "",
       phone: "",
     },
+  });
+
+  const lookupStatus = usePostcodeAutoFill({
+    postcode: watch("postcode") || "",
+    setValue: (field, value, options) =>
+      setValue(field as keyof FormData, value, options),
+    getValue: (field) => getValues(field as keyof FormData) || "",
   });
 
   const errorMessages: Record<string, string> = {
@@ -81,7 +93,7 @@ export function ShippingForm({ dict, isGuest, defaultEmail, onSubmit, onBack }: 
       address_line_2: data.address_line_2 || "",
       city: data.city,
       county: data.county || "",
-      postcode: data.postcode,
+      postcode: formatUkPostcode(data.postcode),
       country: data.country,
       phone: data.phone || "",
     };
@@ -115,6 +127,15 @@ export function ShippingForm({ dict, isGuest, defaultEmail, onSubmit, onBack }: 
     color: "var(--error)",
     marginTop: "var(--space-1)",
   };
+
+  const helperStyle = {
+    fontFamily: "var(--font-montserrat)",
+    fontSize: 11,
+    color: "var(--white-faint)",
+    marginTop: "var(--space-1)",
+  };
+
+  const cityCountyAutoFilled = lookupStatus === "ok";
 
   return (
     <div className="mx-auto max-w-lg rounded-lg" style={{ background: "var(--bg-secondary)", border: "1px solid var(--bg-border)", padding: "var(--space-8)" }}>
@@ -156,17 +177,82 @@ export function ShippingForm({ dict, isGuest, defaultEmail, onSubmit, onBack }: 
           {getError("full_name") && <p style={errorStyle}>{getError("full_name")}</p>}
         </div>
 
+        {/* Postcode first — it auto-fills city/county once a valid UK postcode is typed. */}
+        <div>
+          <label style={labelStyle}>
+            {dict.shipping.postcode} <span style={{ color: "var(--error)" }}>*</span>
+          </label>
+          <div className="relative">
+            <input
+              {...register("postcode")}
+              autoComplete="postal-code"
+              placeholder="e.g. SW1A 1AA"
+              onBlur={(e) => {
+                const formatted = formatUkPostcode(e.target.value);
+                if (formatted !== e.target.value) {
+                  setValue("postcode", formatted, { shouldValidate: true });
+                }
+              }}
+              className="w-full outline-none uppercase"
+              style={{
+                ...inputStyle(!!errors.postcode || lookupStatus === "not_found"),
+                paddingRight: 36,
+                textTransform: "uppercase",
+              }}
+            />
+            <span
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color:
+                lookupStatus === "ok" ? "var(--success)"
+                : lookupStatus === "not_found" ? "var(--error)"
+                : "var(--white-faint)",
+              }}
+            >
+              {lookupStatus === "loading" && <Loader2 size={14} className="animate-spin" />}
+              {lookupStatus === "ok" && <Check size={14} />}
+              {lookupStatus === "not_found" && <AlertCircle size={14} />}
+              {lookupStatus === "idle" && <MapPin size={14} />}
+            </span>
+          </div>
+          {lookupStatus === "ok" && (
+            <p style={{ ...helperStyle, color: "var(--success)" }}>
+              <Check size={11} className="mb-0.5 mr-1 inline" /> Postcode found — city &amp; county filled in below.
+            </p>
+          )}
+          {lookupStatus === "not_found" && (
+            <p style={{ ...helperStyle, color: "var(--error)" }}>
+              Couldn&apos;t find that postcode. Check it&apos;s typed correctly, or fill in city &amp; county manually.
+            </p>
+          )}
+          {lookupStatus !== "ok" && lookupStatus !== "not_found" && (
+            <p style={helperStyle}>Type your UK postcode and we&apos;ll fill in the rest.</p>
+          )}
+          {getError("postcode") && <p style={errorStyle}>{getError("postcode")}</p>}
+        </div>
+
         <div>
           <label style={labelStyle}>
             {dict.shipping.addressLine1} <span style={{ color: "var(--error)" }}>*</span>
           </label>
-          <input {...register("address_line_1")} className="w-full outline-none" style={inputStyle(!!errors.address_line_1)} />
+          <input
+            {...register("address_line_1")}
+            autoComplete="address-line1"
+            placeholder="House number and street"
+            className="w-full outline-none"
+            style={inputStyle(!!errors.address_line_1)}
+          />
           {getError("address_line_1") && <p style={errorStyle}>{getError("address_line_1")}</p>}
         </div>
 
         <div>
           <label style={labelStyle}>{dict.shipping.addressLine2}</label>
-          <input {...register("address_line_2")} className="w-full outline-none" style={inputStyle(false)} />
+          <input
+            {...register("address_line_2")}
+            autoComplete="address-line2"
+            placeholder="Apartment, suite, etc. (optional)"
+            className="w-full outline-none"
+            style={inputStyle(false)}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -174,27 +260,38 @@ export function ShippingForm({ dict, isGuest, defaultEmail, onSubmit, onBack }: 
             <label style={labelStyle}>
               {dict.shipping.city} <span style={{ color: "var(--error)" }}>*</span>
             </label>
-            <input {...register("city")} className="w-full outline-none" style={inputStyle(!!errors.city)} />
+            <input
+              {...register("city")}
+              autoComplete="address-level2"
+              className="w-full outline-none"
+              style={inputStyle(!!errors.city)}
+            />
+            {cityCountyAutoFilled && (
+              <p style={helperStyle}>Auto-filled — edit if needed.</p>
+            )}
             {getError("city") && <p style={errorStyle}>{getError("city")}</p>}
           </div>
           <div>
             <label style={labelStyle}>{dict.shipping.county}</label>
-            <input {...register("county")} className="w-full outline-none" style={inputStyle(false)} />
+            <input
+              {...register("county")}
+              autoComplete="address-level1"
+              className="w-full outline-none"
+              style={inputStyle(false)}
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label style={labelStyle}>
-              {dict.shipping.postcode} <span style={{ color: "var(--error)" }}>*</span>
-            </label>
-            <input {...register("postcode")} className="w-full outline-none" style={inputStyle(!!errors.postcode)} />
-            {getError("postcode") && <p style={errorStyle}>{getError("postcode")}</p>}
-          </div>
-          <div>
-            <label style={labelStyle}>{dict.shipping.phone}</label>
-            <input {...register("phone")} type="tel" className="w-full outline-none" style={inputStyle(false)} />
-          </div>
+        <div>
+          <label style={labelStyle}>{dict.shipping.phone}</label>
+          <input
+            {...register("phone")}
+            autoComplete="tel"
+            type="tel"
+            placeholder="For delivery updates (optional)"
+            className="w-full outline-none"
+            style={inputStyle(false)}
+          />
         </div>
 
         <div className="flex gap-3">

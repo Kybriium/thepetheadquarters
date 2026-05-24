@@ -7,7 +7,13 @@ import { StarRating } from "@/components/ui/star-rating";
 import { useCart } from "@/lib/cart-context";
 import { track } from "@/lib/analytics";
 import { VariantSelector } from "./variant-selector";
+import { CustomizationPanel } from "./customization-panel";
 import type { ProductDetail } from "@/types/product";
+import type {
+  CustomizationAnswer,
+  CustomizationField,
+  CustomizationSummary,
+} from "@/types/customization";
 
 interface ProductInfoProps {
   product: ProductDetail;
@@ -21,19 +27,42 @@ interface ProductInfoProps {
     quantity: string;
     selectVariant: string;
   };
+  customizationFields: CustomizationField[];
+  /** Lifted up so the ImageGallery on the PDP can react to the same state. */
+  onVariantChange?: (variantId: string | null) => void;
 }
 
 function formatPrice(pence: number): string {
   return `£${(pence / 100).toFixed(2)}`;
 }
 
-export function ProductInfo({ product, dict }: ProductInfoProps) {
+export function ProductInfo({ product, dict, customizationFields, onVariantChange }: ProductInfoProps) {
   const variants = product.variants ?? [];
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+  const [selectedVariantId, setSelectedVariantIdState] = useState<string | null>(
     variants.length === 1 ? variants[0].id : null,
   );
+  function setSelectedVariantId(id: string | null) {
+    setSelectedVariantIdState(id);
+    onVariantChange?.(id);
+  }
+  // Notify parent on first render too, so the gallery reflects the initial state.
+  useEffect(() => {
+    onVariantChange?.(selectedVariantId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
+
+  const hasCustomizations = customizationFields.length > 0;
+  const requiredCount = customizationFields.filter((f) => f.is_required).length;
+  // Start as valid only when there are no required fields. If there are
+  // required fields, the customer has to fill them before add-to-cart unlocks.
+  const [customization, setCustomization] = useState<{
+    isValid: boolean;
+    answers: CustomizationAnswer[];
+    summary: CustomizationSummary[];
+    surcharge: number;
+  }>({ isValid: requiredCount === 0, answers: [], summary: [], surcharge: 0 });
 
   // Fire a product_view event once per product per mount.
   useEffect(() => {
@@ -49,10 +78,17 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
   }, [product.id]);
 
   const selectedVariant = variants.find((v) => v.id === selectedVariantId);
+  const displayPrice = selectedVariant
+    ? selectedVariant.price + customization.surcharge
+    : null;
 
   function handleAddToCart() {
     if (!selectedVariant) {
       toast.warning(dict.selectVariant);
+      return;
+    }
+    if (hasCustomizations && !customization.isValid) {
+      toast.warning("Please fill in the required customization fields");
       return;
     }
     addItem({
@@ -61,10 +97,13 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
       name: product.name,
       image: product.primary_image,
       price: selectedVariant.price,
+      customizationSurcharge: customization.surcharge,
       sku: selectedVariant.sku,
       optionLabel: selectedVariant.option_values.map((ov) => ov.value).join(" / "),
       slug: product.slug,
       quantity,
+      customizations: customization.answers,
+      customizationSummary: customization.summary,
     });
     toast.success(`${product.name} added to cart`);
     setQuantity(1);
@@ -77,6 +116,9 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
         ? "low"
         : "in"
     : null;
+
+  const addToCartDisabled =
+    stockStatus === "out" || (hasCustomizations && !customization.isValid);
 
   return (
     <div className="flex flex-col gap-5">
@@ -104,7 +146,7 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
 
       {/* Price */}
       <div className="flex items-baseline gap-3">
-        {selectedVariant ? (
+        {selectedVariant && displayPrice !== null ? (
           <>
             <span
               style={{
@@ -114,8 +156,19 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
                 color: "var(--white)",
               }}
             >
-              {formatPrice(selectedVariant.price)}
+              {formatPrice(displayPrice)}
             </span>
+            {customization.surcharge > 0 && (
+              <span
+                style={{
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: "var(--text-xs)",
+                  color: "var(--gold-dark)",
+                }}
+              >
+                (incl. +{formatPrice(customization.surcharge)} personalization)
+              </span>
+            )}
             {selectedVariant.compare_at_price && selectedVariant.compare_at_price > selectedVariant.price && (
               <>
                 <span
@@ -181,10 +234,19 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
       {/* Variant selector */}
       <VariantSelector
         variants={variants}
+        optionTypes={product.option_types || []}
         selectedId={selectedVariantId}
         onSelect={setSelectedVariantId}
         selectLabel={dict.selectVariant}
       />
+
+      {/* Customization panel — dynamically rendered from server-defined fields. */}
+      {hasCustomizations && (
+        <CustomizationPanel
+          fields={customizationFields}
+          onChange={setCustomization}
+        />
+      )}
 
       {/* Stock status */}
       {stockStatus && (
@@ -260,7 +322,7 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
         {/* Add to Cart */}
         <button
           onClick={handleAddToCart}
-          disabled={stockStatus === "out"}
+          disabled={addToCartDisabled}
           className="btn-gold flex flex-1 items-center justify-center gap-2 rounded-md py-3 transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
           style={{
             fontFamily: "var(--font-montserrat)",
@@ -271,7 +333,11 @@ export function ProductInfo({ product, dict }: ProductInfoProps) {
           }}
         >
           <ShoppingCart size={18} />
-          {stockStatus === "out" ? dict.outOfStock : dict.addToCart}
+          {stockStatus === "out"
+            ? dict.outOfStock
+            : hasCustomizations && !customization.isValid
+              ? "Fill in required fields"
+              : dict.addToCart}
         </button>
       </div>
     </div>

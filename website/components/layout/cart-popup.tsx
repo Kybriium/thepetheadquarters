@@ -107,7 +107,7 @@ export function CartPopup({ open, onClose }: { open: boolean; onClose: () => voi
               <div className="flex flex-col gap-2">
                 {items.map((item) => (
                   <div
-                    key={item.variantId}
+                    key={item.lineId}
                     className="flex gap-3 rounded-md p-2.5 transition-all duration-200 hover:bg-[var(--bg-border)]"
                     style={{ background: "var(--bg-tertiary)" }}
                   >
@@ -137,12 +137,17 @@ export function CartPopup({ open, onClose }: { open: boolean; onClose: () => voi
                             {item.optionLabel}
                           </span>
                         )}
+                        {item.customizationSummary.length > 0 && (
+                          <span className="mt-0.5 block" style={{ fontFamily: "var(--font-montserrat)", fontSize: "10px", color: "var(--gold)" }}>
+                            ✦ {item.customizationSummary.map((c) => c.label_value).join(" · ")}
+                          </span>
+                        )}
                       </div>
 
                       <div className="mt-1.5 flex items-center justify-between">
                         <div className="flex items-center overflow-hidden rounded" style={{ border: "1px solid var(--bg-border)" }}>
                           <button
-                            onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
                             className="flex h-6 w-6 items-center justify-center transition-colors duration-150 hover:bg-[var(--bg-border)]"
                             style={{ background: "var(--bg-secondary)", color: "var(--white-dim)" }}
                           >
@@ -155,7 +160,7 @@ export function CartPopup({ open, onClose }: { open: boolean; onClose: () => voi
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
                             className="flex h-6 w-6 items-center justify-center transition-colors duration-150 hover:bg-[var(--bg-border)]"
                             style={{ background: "var(--bg-secondary)", color: "var(--white-dim)" }}
                           >
@@ -164,10 +169,10 @@ export function CartPopup({ open, onClose }: { open: boolean; onClose: () => voi
                         </div>
                         <div className="flex items-center gap-2">
                           <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--white)" }}>
-                            {formatPrice(item.price * item.quantity)}
+                            {formatPrice((item.price + item.customizationSurcharge) * item.quantity)}
                           </span>
                           <button
-                            onClick={() => removeItem(item.variantId)}
+                            onClick={() => removeItem(item.lineId)}
                             className="flex h-6 w-6 items-center justify-center rounded-full transition-all duration-200 hover:bg-[rgba(244,67,54,0.15)]"
                             style={{ color: "var(--error)" }}
                           >

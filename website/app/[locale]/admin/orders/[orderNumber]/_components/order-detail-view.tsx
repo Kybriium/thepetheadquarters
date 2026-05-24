@@ -225,6 +225,28 @@ export function OrderDetailView({ dict, orderNumber }: OrderDetailViewProps) {
                     COGS: {formatPrice(item.cogs_amount)}
                   </p>
                 )}
+                {item.customizations.length > 0 && (
+                  <div className="mt-2 rounded-md p-2.5" style={{ background: "rgba(187,148,41,0.08)", borderLeft: "2px solid var(--gold)" }}>
+                    <p className="mb-1" style={{ fontFamily: "var(--font-montserrat)", fontSize: "10px", fontWeight: 600, color: "var(--gold-dark)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)" }}>
+                      Personalization
+                    </p>
+                    <div className="flex flex-col gap-0.5">
+                      {item.customizations.map((c) => (
+                        <p key={c.key} style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-dim)" }}>
+                          <span style={{ fontWeight: 600, color: "var(--white)" }}>{c.label}:</span> {c.label_value}
+                          {c.image_url && (
+                            <>
+                              {" — "}
+                              <a href={c.image_url} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--gold-dark)" }}>
+                                download
+                              </a>
+                            </>
+                          )}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--white)" }}>
                 {formatPrice(item.line_total)}

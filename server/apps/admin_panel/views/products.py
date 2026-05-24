@@ -9,9 +9,11 @@ from apps.core.responses import (
 )
 
 from apps.products.models import (
+    OptionValue,
     Product,
     ProductCategory,
     ProductImage,
+    ProductOptionType,
     ProductTranslation,
     ProductVariant,
 )
@@ -197,7 +199,53 @@ class AdminProductDetailView(AdminBaseView):
         return success_response()
 
 
+def _apply_option_values(product, variant, option_value_ids):
+    """
+    Replace the variant's option_values with the given IDs after verifying:
+      - every ID exists
+      - every value's OptionType is attached to this product (ProductOptionType)
+      - at most one value per OptionType (a variant can't be both Red and Blue)
+
+    Raises a tuple (code, status) for the view to surface as an error.
+    """
+    if not option_value_ids:
+        variant.option_values.clear()
+        return
+
+    values = list(
+        OptionValue.objects.filter(id__in=option_value_ids).select_related("option_type")
+    )
+    if len(values) != len(option_value_ids):
+        raise ValueError("admin.variants.unknown_option_value")
+
+    allowed_type_ids = set(
+        ProductOptionType.objects.filter(product=product).values_list(
+            "option_type_id", flat=True
+        )
+    )
+    if not allowed_type_ids:
+        # Implicit attachment — older products that never set ProductOptionType
+        # rows still need to work. Auto-attach the types the admin just used.
+        for v in values:
+            ProductOptionType.objects.get_or_create(
+                product=product, option_type=v.option_type,
+                defaults={"sort_order": 0},
+            )
+        allowed_type_ids = {v.option_type_id for v in values}
+
+    seen_types = set()
+    for v in values:
+        if v.option_type_id not in allowed_type_ids:
+            raise ValueError("admin.variants.option_type_not_attached")
+        if v.option_type_id in seen_types:
+            raise ValueError("admin.variants.duplicate_axis")
+        seen_types.add(v.option_type_id)
+
+    variant.option_values.set(values)
+
+
 class AdminProductVariantsView(AdminBaseView):
+    @transaction.atomic
     def post(self, request, product_id):
         try:
             product = Product.objects.get(id=product_id)
@@ -208,7 +256,16 @@ class AdminProductVariantsView(AdminBaseView):
         if not serializer.is_valid():
             return validation_error_response(serializer.errors)
 
-        variant = ProductVariant.objects.create(product=product, **serializer.validated_data)
+        data = dict(serializer.validated_data)
+        option_value_ids = data.pop("option_value_ids", [])
+
+        variant = ProductVariant.objects.create(product=product, **data)
+        try:
+            _apply_option_values(product, variant, option_value_ids)
+        except ValueError as exc:
+            transaction.set_rollback(True)
+            return error_response(str(exc))
+
         return created_response(
             data={
                 "id": str(variant.id),
@@ -220,9 +277,10 @@ class AdminProductVariantsView(AdminBaseView):
 
 
 class AdminVariantDetailView(AdminBaseView):
+    @transaction.atomic
     def patch(self, request, variant_id):
         try:
-            variant = ProductVariant.objects.get(id=variant_id)
+            variant = ProductVariant.objects.select_related("product").get(id=variant_id)
         except ProductVariant.DoesNotExist:
             return error_response("admin.variants.not_found", status_code=404)
 
@@ -230,9 +288,19 @@ class AdminVariantDetailView(AdminBaseView):
         if not serializer.is_valid():
             return validation_error_response(serializer.errors)
 
-        for field, value in serializer.validated_data.items():
+        data = dict(serializer.validated_data)
+        option_value_ids = data.pop("option_value_ids", None)
+
+        for field, value in data.items():
             setattr(variant, field, value)
         variant.save()
+
+        if option_value_ids is not None:
+            try:
+                _apply_option_values(variant.product, variant, option_value_ids)
+            except ValueError as exc:
+                transaction.set_rollback(True)
+                return error_response(str(exc))
 
         return success_response(data={"id": str(variant.id), "sku": variant.sku})
 
@@ -244,6 +312,75 @@ class AdminVariantDetailView(AdminBaseView):
         variant.is_active = False
         variant.save(update_fields=["is_active"])
         return success_response()
+
+
+class AdminProductVariantsBulkView(AdminBaseView):
+    """
+    Matrix-generate variants from a list of `combinations`. Each combination
+    is a list of OptionValue IDs (one per axis). Already-existing
+    combinations are skipped (idempotent). Useful for the Temu/Amazon-style
+    'Color × Size → 9 SKUs' admin flow.
+    """
+
+    @transaction.atomic
+    def post(self, request, product_id):
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return error_response("admin.products.not_found", status_code=404)
+
+        combinations = request.data.get("combinations") or []
+        default_price = int(request.data.get("default_price", 0) or 0)
+        default_stock = int(request.data.get("default_stock", 0) or 0)
+        sku_prefix = (request.data.get("sku_prefix") or "TPH").strip()
+
+        if not isinstance(combinations, list) or not combinations:
+            return validation_error_response({"combinations": "required (list of OptionValue id lists)"})
+        if default_price <= 0:
+            return validation_error_response({"default_price": "must be > 0"})
+
+        # Existing combinations on the product → skip to keep this idempotent.
+        existing = set()
+        for v in product.variants.prefetch_related("option_values").all():
+            key = tuple(sorted(str(ov.id) for ov in v.option_values.all()))
+            if key:
+                existing.add(key)
+
+        # Next SKU number — find the highest existing TPH-XXXXX seq and
+        # increment from there to avoid collisions.
+        last_seq = 0
+        for v in ProductVariant.objects.filter(sku__startswith=f"{sku_prefix}-").only("sku"):
+            try:
+                seq = int(v.sku.rsplit("-", 1)[-1])
+                if seq > last_seq:
+                    last_seq = seq
+            except ValueError:
+                continue
+
+        created = 0
+        for combo in combinations:
+            if not isinstance(combo, list) or not combo:
+                continue
+            key = tuple(sorted(str(x) for x in combo))
+            if key in existing:
+                continue
+            last_seq += 1
+            variant = ProductVariant.objects.create(
+                product=product,
+                sku=f"{sku_prefix}-{last_seq:05d}",
+                price=default_price,
+                stock_quantity=default_stock,
+                sort_order=product.variants.count(),
+            )
+            try:
+                _apply_option_values(product, variant, combo)
+            except ValueError as exc:
+                transaction.set_rollback(True)
+                return error_response(str(exc))
+            existing.add(key)
+            created += 1
+
+        return success_response(data={"created": created})
 
 
 class AdminProductImagesView(AdminBaseView):
@@ -295,6 +432,17 @@ class AdminImageDetailView(AdminBaseView):
             image.alt_text = request.data["alt_text"]
         if "sort_order" in request.data:
             image.sort_order = int(request.data["sort_order"])
+        if "variant_id" in request.data:
+            # Empty string / None detaches; otherwise must belong to the same product.
+            raw = request.data["variant_id"]
+            if not raw:
+                image.variant_id = None
+            else:
+                try:
+                    variant = ProductVariant.objects.get(id=raw, product_id=image.product_id)
+                except ProductVariant.DoesNotExist:
+                    return error_response("admin.images.variant_not_on_product")
+                image.variant_id = variant.id
 
         image.save()
         return success_response(data={
@@ -303,6 +451,7 @@ class AdminImageDetailView(AdminBaseView):
             "is_primary": image.is_primary,
             "alt_text": image.alt_text,
             "sort_order": image.sort_order,
+            "variant": str(image.variant_id) if image.variant_id else None,
         })
 
     def delete(self, request, image_id):

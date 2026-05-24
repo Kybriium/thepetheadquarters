@@ -68,12 +68,17 @@ class ProductCategory(BaseModel):
 class OptionType(BaseModel, SortableMixin):
     """Variant axis definition: Weight, Flavour, Colour, etc."""
 
+    # Stable identifier used by admin code/reports — slug-like, unique.
+    # Nullable for migration compatibility with pre-existing rows; the admin
+    # API requires it on create.
+    code = models.CharField(max_length=80, unique=True, null=True, blank=True)
+
     class Meta(BaseModel.Meta):
         ordering = ["sort_order"]
 
     def __str__(self):
         translation = self.translations.filter(language="en").first()
-        return translation.name if translation else str(self.pk)
+        return translation.name if translation else (self.code or str(self.pk))
 
 
 class OptionTypeTranslation(TranslationBaseModel):
@@ -98,6 +103,11 @@ class OptionValue(BaseModel, SortableMixin):
         on_delete=models.CASCADE,
         related_name="values",
     )
+    # Visual swatch — either a CSS-style hex (#FF0000) for solid colors or a
+    # small image URL for patterns / fabrics. Renderer falls back to the
+    # value's text label when neither is set.
+    swatch_hex = models.CharField(max_length=9, blank=True, default="")
+    swatch_image_url = models.URLField(max_length=500, blank=True, default="")
 
     class Meta(BaseModel.Meta):
         ordering = ["sort_order"]
@@ -105,6 +115,40 @@ class OptionValue(BaseModel, SortableMixin):
     def __str__(self):
         translation = self.translations.filter(language="en").first()
         return translation.value if translation else str(self.pk)
+
+
+class ProductOptionType(BaseModel, SortableMixin):
+    """
+    Declares which option-type axes a product is variantable along, in the
+    order they should appear in the storefront selector.
+
+    Without this row, the storefront falls back to deriving axes from the
+    product's variants — fine for legacy products but doesn't fix axis order
+    or let admin add a new axis with no variants yet.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="option_type_links",
+    )
+    option_type = models.ForeignKey(
+        OptionType,
+        on_delete=models.CASCADE,
+        related_name="product_links",
+    )
+
+    class Meta(BaseModel.Meta):
+        ordering = ["sort_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "option_type"],
+                name="uniq_product_option_type",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.product_id} ← {self.option_type}"
 
 
 class OptionValueTranslation(TranslationBaseModel):

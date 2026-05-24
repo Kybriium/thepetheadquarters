@@ -3,9 +3,22 @@ from rest_framework import serializers
 from apps.orders.models import Order, OrderItem
 
 
+class CustomizationAnswerSerializer(serializers.Serializer):
+    """One entry in the customer's per-line customization payload."""
+
+    key = serializers.CharField(max_length=80)
+    # Free-form value: string for text/image-url/select, or {url, public_id}
+    # for an image upload result. Server-side validator in
+    # apps.customizations.services enforces shape against the product's schema.
+    value = serializers.JSONField()
+
+
 class CheckoutItemSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1, max_value=99)
+    customizations = CustomizationAnswerSerializer(
+        many=True, required=False, default=list
+    )
 
 
 class ShippingAddressSerializer(serializers.Serializer):
@@ -36,6 +49,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
             "id", "product_name", "variant_sku", "variant_option_label",
             "unit_price", "quantity", "line_total", "image_url",
             "fulfillment_status",
+            "customizations", "customization_surcharge",
         ]
 
 

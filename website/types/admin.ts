@@ -32,6 +32,19 @@ export interface AdminOrderListItem {
   shipped_at: string | null;
 }
 
+export interface AdminOrderItemCustomization {
+  key: string;
+  label: string;
+  field_type: "text" | "long_text" | "image" | "select" | "position";
+  value: string | { url: string; public_id?: string };
+  label_value: string;
+  surcharge_pence: number;
+  image_url?: string;
+  image_public_id?: string;
+  option_id?: string;
+  preview_image_url?: string;
+}
+
 export interface AdminOrderItem {
   id: string;
   product_id: string | null;
@@ -50,6 +63,8 @@ export interface AdminOrderItem {
   supplier_id: string | null;
   supplier_cost: number;
   forwarded_to_supplier_at: string | null;
+  customizations: AdminOrderItemCustomization[];
+  customization_surcharge: number;
 }
 
 export interface AdminOrder {

@@ -69,7 +69,7 @@ export function PromoCodeBox({ email, onChange }: PromoCodeBoxProps) {
       void apply(applied.code, { silent: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.map((i) => `${i.variantId}:${i.quantity}`).join(",")]);
+  }, [items.map((i) => `${i.lineId}:${i.quantity}`).join(",")]);
 
   async function apply(code: string, opts: { silent?: boolean } = {}) {
     const trimmed = code.trim().toUpperCase();

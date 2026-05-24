@@ -31,7 +31,14 @@ class OptionValueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OptionValue
-        fields = ["id", "value", "option_type_id"]
+        fields = [
+            "id",
+            "value",
+            "option_type_id",
+            "swatch_hex",
+            "swatch_image_url",
+            "sort_order",
+        ]
 
     def get_value(self, obj) -> str:
         lang = self.context.get("language", "en")
@@ -45,12 +52,12 @@ class OptionTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OptionType
-        fields = ["id", "name", "values"]
+        fields = ["id", "code", "name", "values", "sort_order"]
 
     def get_name(self, obj) -> str:
         lang = self.context.get("language", "en")
         t = get_translation(obj, lang)
-        return t.name if t else ""
+        return t.name if t else (obj.code or "")
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -158,6 +165,8 @@ class ProductDetailSerializer(ProductListSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     category_ids = serializers.SerializerMethodField()
     brand = serializers.SerializerMethodField()
+    is_customizable = serializers.SerializerMethodField()
+    option_types = serializers.SerializerMethodField()
 
     class Meta(ProductListSerializer.Meta):
         fields = [
@@ -181,7 +190,65 @@ class ProductDetailSerializer(ProductListSerializer):
             "variants",
             "images",
             "category_ids",
+            "is_customizable",
+            "option_types",
         ]
+
+    def get_option_types(self, obj) -> list:
+        """
+        Ordered axes the storefront should render in the variant selector.
+        Prefers the explicit ProductOptionType rows when present; falls back
+        to deriving from the variants' option_values so legacy products that
+        pre-date the join table still render.
+        """
+        lang = self.context.get("language", "en")
+        explicit = list(
+            obj.option_type_links.select_related("option_type")
+            .prefetch_related("option_type__translations", "option_type__values__translations")
+            .order_by("sort_order")
+        )
+
+        seen_ids: set = set()
+        ordered_types: list = []
+        if explicit:
+            for link in explicit:
+                if link.option_type_id in seen_ids:
+                    continue
+                seen_ids.add(link.option_type_id)
+                ordered_types.append(link.option_type)
+        else:
+            # Derive from active variants' option values (legacy products).
+            active_variants = getattr(obj, "active_variants", None) or obj.variants.filter(is_active=True)
+            for v in active_variants:
+                for ov in v.option_values.all():
+                    if ov.option_type_id in seen_ids:
+                        continue
+                    seen_ids.add(ov.option_type_id)
+                    ordered_types.append(ov.option_type)
+
+        result = []
+        for ot in ordered_types:
+            t = get_translation(ot, lang)
+            result.append({
+                "id": str(ot.id),
+                "code": ot.code or "",
+                "name": t.name if t else (ot.code or ""),
+                "sort_order": ot.sort_order,
+            })
+        return result
+
+    def get_is_customizable(self, obj) -> bool:
+        """
+        True if at least one customization field would be returned by the
+        public `/products/<slug>/customizations/` endpoint. Lets the PDP
+        skip the second fetch (and the panel render) for non-customized
+        products without preloading the full field schema here.
+        """
+        if obj.ad_hoc_customization_fields.exists():
+            return True
+        return obj.customization_template_links.filter(
+            template__is_active=True,
+        ).exists()
 
     def get_description(self, obj) -> str:
         lang = self.context.get("language", "en")

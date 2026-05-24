@@ -6,7 +6,8 @@ Thank you for your order! Here are the details:
 
 Order Number: {{ order.order_number }}
 {% for item in items %}
-- {{ item.product_name }}{% if item.variant_option_label %} ({{ item.variant_option_label }}){% endif %} x{{ item.quantity }} — £{{ item.line_total|divisibleby:100 }}{% endfor %}
+- {{ item.product_name }}{% if item.variant_option_label %} ({{ item.variant_option_label }}){% endif %} x{{ item.quantity }} — £{{ item.line_total|divisibleby:100 }}{% for c in item.customizations %}
+    · {{ c.label }}: {{ c.label_value }}{% if c.image_url %} ({{ c.image_url }}){% endif %}{% endfor %}{% endfor %}
 
 Subtotal: £{{ order.subtotal|divisibleby:100 }}
 Shipping: {% if order.shipping_cost == 0 %}FREE{% else %}£{{ order.shipping_cost|divisibleby:100 }}{% endif %}

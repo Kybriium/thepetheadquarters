@@ -23,6 +23,19 @@
             <td style="padding:12px 0;border-bottom:1px solid #DED9CF;">
               <p style="margin:0;font-size:14px;color:#111111;font-weight:500;">{{ item.product_name }}</p>
               {% if item.variant_option_label %}<p style="margin:2px 0 0;font-size:12px;color:#555555;">{{ item.variant_option_label }}</p>{% endif %}
+              {% if item.customizations %}
+                <div style="margin-top:6px;padding:8px 10px;background:#F4F1EA;border-left:2px solid #C6A030;font-size:12px;color:#2D2D2D;">
+                  <strong style="color:#111111;">Personalization</strong>
+                  {% for c in item.customizations %}
+                    <div style="margin-top:2px;">
+                      <strong>{{ c.label }}:</strong> {{ c.label_value }}
+                      {% if c.image_url %}
+                        — <a href="{{ c.image_url }}" style="color:#C6A030;">view image</a>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
             </td>
             <td style="padding:12px 0;border-bottom:1px solid #DED9CF;text-align:right;white-space:nowrap;">
               <p style="margin:0;font-size:13px;color:#555555;">x{{ item.quantity }}</p>

@@ -20,6 +20,16 @@ export interface AdminProductListItem {
   created_at: string;
 }
 
+export interface AdminVariantOptionValue {
+  id: string;
+  label: string;
+  swatch_hex: string;
+  swatch_image_url: string;
+  option_type_id: string;
+  option_type_code: string;
+  sort_order: number;
+}
+
 export interface AdminVariant {
   id: string;
   sku: string;
@@ -30,6 +40,15 @@ export interface AdminVariant {
   weight_grams: number | null;
   sort_order: number;
   is_active: boolean;
+  option_values: AdminVariantOptionValue[];
+}
+
+export interface AdminProductOptionTypeRef {
+  id: string;
+  option_type_id: string;
+  code: string;
+  name: string;
+  sort_order: number;
 }
 
 export interface AdminProductImage {
@@ -56,6 +75,7 @@ export interface AdminProductDetail {
   category_ids: string[];
   variants: AdminVariant[];
   images: AdminProductImage[];
+  option_types: AdminProductOptionTypeRef[];
 }
 
 export const adminProductKeys = {
@@ -148,6 +168,8 @@ interface VariantFormData {
   weight_grams: number | null;
   sort_order: number;
   is_active: boolean;
+  /** Optional — list of OptionValue IDs the variant represents. */
+  option_value_ids?: string[];
 }
 
 export function useCreateVariant(productId: string) {
@@ -231,7 +253,7 @@ export function useUpdateImage(productId: string) {
       data,
     }: {
       imageId: string;
-      data: { is_primary?: boolean; alt_text?: string; sort_order?: number };
+      data: { is_primary?: boolean; alt_text?: string; sort_order?: number; variant_id?: string | null };
     }) => {
       return apiClient.patch(endpoints.admin.images.detail(imageId), data);
     },

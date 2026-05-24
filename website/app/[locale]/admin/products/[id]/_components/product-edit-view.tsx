@@ -14,12 +14,13 @@ import { ConfirmModal } from "../../../_components/confirm-modal";
 import { ProductInfoForm } from "./product-info-form";
 import { VariantsManager } from "./variants-manager";
 import { ImagesManager } from "./images-manager";
+import { CustomizationsManager } from "./customizations-manager";
 
 interface ProductEditViewProps {
   productId: string;
 }
 
-type Tab = "info" | "variants" | "images";
+type Tab = "info" | "variants" | "images" | "customizations";
 
 export function ProductEditView({ productId }: ProductEditViewProps) {
   const { data: product, isLoading } = useAdminProduct(productId);
@@ -81,7 +82,7 @@ export function ProductEditView({ productId }: ProductEditViewProps) {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b" style={{ borderColor: "var(--bg-border)" }}>
-        {(["info", "variants", "images"] as const).map((t) => (
+        {(["info", "variants", "images", "customizations"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -119,8 +120,9 @@ export function ProductEditView({ productId }: ProductEditViewProps) {
           saving={updateMutation.isPending}
         />
       )}
-      {tab === "variants" && <VariantsManager productId={productId} variants={product.variants} />}
-      {tab === "images" && <ImagesManager productId={productId} images={product.images} />}
+      {tab === "variants" && <VariantsManager productId={productId} variants={product.variants} product={product} />}
+      {tab === "images" && <ImagesManager productId={productId} images={product.images} variants={product.variants} />}
+      {tab === "customizations" && <CustomizationsManager productId={productId} />}
 
       <ConfirmModal
         open={confirmDelete}

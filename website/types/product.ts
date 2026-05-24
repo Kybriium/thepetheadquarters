@@ -29,6 +29,8 @@ export interface ProductDetail extends Product {
   variants: ProductVariant[];
   images: ProductImage[];
   category_ids: string[];
+  is_customizable: boolean;
+  option_types: ProductOptionType[];
 }
 
 export interface ProductTranslation {
@@ -66,4 +68,14 @@ export interface OptionValue {
   id: string;
   value: string;
   option_type_id: string;
+  swatch_hex?: string;
+  swatch_image_url?: string;
+  sort_order?: number;
+}
+
+export interface ProductOptionType {
+  id: string;
+  code: string;
+  name: string;
+  sort_order: number;
 }

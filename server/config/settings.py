@@ -39,6 +39,7 @@ LOCAL_APPS = [
     "apps.brands",
     "apps.products",
     "apps.attributes",
+    "apps.customizations",
     "apps.newsletter",
     "apps.contact",
     "apps.orders",
@@ -268,6 +269,8 @@ REST_FRAMEWORK = {
         "anon_sustained": "500/day",
         "user_burst": "60/minute",
         "user_sustained": "2000/day",
+        # Customization image uploads — tight because each request stores a file.
+        "customization_upload": "10/minute",
     },
 }
 

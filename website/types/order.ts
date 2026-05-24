@@ -1,3 +1,18 @@
+import type { CustomizationFieldType } from "@/types/customization";
+
+export interface OrderItemCustomization {
+  key: string;
+  label: string;
+  field_type: CustomizationFieldType;
+  value: string | { url: string; public_id?: string };
+  label_value: string;
+  surcharge_pence: number;
+  image_url?: string;
+  image_public_id?: string;
+  option_id?: string;
+  preview_image_url?: string;
+}
+
 export interface OrderItem {
   id: string;
   product_name: string;
@@ -8,6 +23,8 @@ export interface OrderItem {
   line_total: number;
   image_url: string;
   fulfillment_status: string;
+  customizations: OrderItemCustomization[];
+  customization_surcharge: number;
 }
 
 export interface Order {

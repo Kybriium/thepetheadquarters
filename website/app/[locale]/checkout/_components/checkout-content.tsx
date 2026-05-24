@@ -60,7 +60,10 @@ export function CheckoutContent({ dict }: CheckoutContentProps) {
     if (items.length > 0) {
       track("checkout_start", {
         item_count: items.length,
-        value_pence: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+        value_pence: items.reduce(
+          (sum, i) => sum + (i.price + i.customizationSurcharge) * i.quantity,
+          0,
+        ),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,6 +119,7 @@ export function CheckoutContent({ dict }: CheckoutContentProps) {
         items: items.map((item) => ({
           variant_id: item.variantId,
           quantity: item.quantity,
+          customizations: item.customizations,
         })),
         shipping_address: shippingAddress,
       };

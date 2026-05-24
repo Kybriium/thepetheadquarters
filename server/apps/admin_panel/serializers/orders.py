@@ -53,6 +53,8 @@ class AdminOrderItemSerializer(serializers.ModelSerializer):
             "supplier_id",
             "supplier_cost",
             "forwarded_to_supplier_at",
+            "customizations",
+            "customization_surcharge",
         ]
 
 

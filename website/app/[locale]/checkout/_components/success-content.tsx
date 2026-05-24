@@ -119,6 +119,42 @@ export function SuccessContent({ dict, sessionId }: SuccessContentProps) {
           <p className="mb-4" style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-2xl)", fontWeight: "var(--weight-bold)", color: "var(--white)" }}>
             {order.order_number}
           </p>
+          {order.items.length > 0 && (
+            <div className="mb-4 flex flex-col gap-3" style={{ borderTop: "1px solid var(--bg-border)", paddingTop: "var(--space-4)" }}>
+              {order.items.map((item) => (
+                <div key={item.id} className="flex flex-col gap-1">
+                  <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--white)" }}>
+                    {item.product_name} <span style={{ color: "var(--white-faint)", fontWeight: 400 }}>× {item.quantity}</span>
+                  </p>
+                  {item.variant_option_label && (
+                    <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)" }}>
+                      {item.variant_option_label}
+                    </p>
+                  )}
+                  {item.customizations.length > 0 && (
+                    <ul className="ml-3 mt-0.5 flex flex-col gap-0.5" style={{ borderLeft: "2px solid var(--gold)", paddingLeft: "var(--space-2)" }}>
+                      {item.customizations.map((c) => (
+                        <li key={c.key} style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--gold-dark)" }}>
+                          <span style={{ fontWeight: 600 }}>{c.label}:</span> {c.label_value}
+                          {c.image_url && (
+                            <a
+                              href={c.image_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-1 underline"
+                              style={{ color: "var(--gold)" }}
+                            >
+                              view
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ borderTop: "1px solid var(--bg-border)", paddingTop: "var(--space-4)" }}>
             <div className="flex justify-between">
               <span style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", color: "var(--white-faint)" }}>Total</span>

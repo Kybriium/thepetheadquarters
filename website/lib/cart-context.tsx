@@ -2,15 +2,22 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { CartItem } from "@/types/cart";
+import type { CustomizationAnswer } from "@/types/customization";
 import { track } from "@/lib/analytics";
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
-  removeItem: (variantId: string) => void;
-  updateQuantity: (variantId: string, quantity: number) => void;
+  /**
+   * Adds a line. If an existing line has the same variant AND identical
+   * customization answers, quantities are merged. Otherwise a new line is
+   * appended so each unique customization configuration ships separately.
+   */
+  addItem: (item: Omit<CartItem, "quantity" | "lineId"> & { quantity?: number }) => void;
+  removeItem: (lineId: string) => void;
+  updateQuantity: (lineId: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
+  /** Subtotal in pence — includes per-unit customization surcharges. */
   subtotal: number;
   drawerOpen: boolean;
   openDrawer: () => void;
@@ -25,11 +32,47 @@ const CartContext = createContext<CartContextType | null>(null);
 const STORAGE_KEY = "tph-cart";
 const PROMO_KEY = "tph-cart-promo";
 
+function generateLineId(): string {
+  // crypto.randomUUID is available in all browsers we target; fall back to
+  // a timestamp+random combo for the (extremely rare) older runtime.
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Stable fingerprint of a customization payload so two lines with the same
+ * answers merge in the cart, but different answers stay separate.
+ */
+function customizationsHash(answers: CustomizationAnswer[]): string {
+  if (!answers || answers.length === 0) return "";
+  const normalized = [...answers]
+    .map((a) => [a.key, a.value])
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  return JSON.stringify(normalized);
+}
+
+function lineMergeKey(item: Pick<CartItem, "variantId" | "customizations">): string {
+  return `${item.variantId}::${customizationsHash(item.customizations || [])}`;
+}
+
+// Older carts stored items without lineId/customizations. Migrate on load
+// so we don't crash on the first render after deploying this feature.
+type LegacyCartItem = Omit<CartItem, "lineId" | "customizations" | "customizationSummary" | "customizationSurcharge"> &
+  Partial<Pick<CartItem, "lineId" | "customizations" | "customizationSummary" | "customizationSurcharge">>;
+
 function loadCart(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as LegacyCartItem[];
+    return parsed.map((item) => ({
+      ...item,
+      lineId: item.lineId || generateLineId(),
+      customizations: item.customizations || [],
+      customizationSummary: item.customizationSummary || [],
+      customizationSurcharge: item.customizationSurcharge || 0,
+    }));
   } catch {
     return [];
   }
@@ -100,39 +143,56 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const addItem = useCallback((newItem: Omit<CartItem, "quantity"> & { quantity?: number }) => {
+  const addItem = useCallback(
+    (newItem: Omit<CartItem, "quantity" | "lineId"> & { quantity?: number }) => {
+      setItems((prev) => {
+        const qty = newItem.quantity || 1;
+        const newKey = lineMergeKey(newItem);
+        const existing = prev.find((i) => lineMergeKey(i) === newKey);
+        if (existing) {
+          return prev.map((i) =>
+            i.lineId === existing.lineId
+              ? { ...i, quantity: i.quantity + qty }
+              : i,
+          );
+        }
+        return [
+          ...prev,
+          { ...newItem, quantity: qty, lineId: generateLineId() },
+        ];
+      });
+      setDrawerOpen(true);
+      track("add_to_cart", {
+        product_id: newItem.productId,
+        variant_id: newItem.variantId,
+        quantity: newItem.quantity || 1,
+        value_pence:
+          (newItem.price + (newItem.customizationSurcharge || 0)) *
+          (newItem.quantity || 1),
+        customized: (newItem.customizations || []).length > 0,
+      });
+    },
+    [],
+  );
+
+  const removeItem = useCallback((lineId: string) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.variantId === newItem.variantId);
-      if (existing) {
-        return prev.map((i) =>
-          i.variantId === newItem.variantId
-            ? { ...i, quantity: i.quantity + (newItem.quantity || 1) }
-            : i,
-        );
+      const removed = prev.find((i) => i.lineId === lineId);
+      const next = prev.filter((i) => i.lineId !== lineId);
+      if (removed) {
+        track("remove_from_cart", { variant_id: removed.variantId });
       }
-      return [...prev, { ...newItem, quantity: newItem.quantity || 1 }];
-    });
-    setDrawerOpen(true);
-    track("add_to_cart", {
-      product_id: newItem.productId,
-      variant_id: newItem.variantId,
-      quantity: newItem.quantity || 1,
-      value_pence: newItem.price * (newItem.quantity || 1),
+      return next;
     });
   }, []);
 
-  const removeItem = useCallback((variantId: string) => {
-    setItems((prev) => prev.filter((i) => i.variantId !== variantId));
-    track("remove_from_cart", { variant_id: variantId });
-  }, []);
-
-  const updateQuantity = useCallback((variantId: string, quantity: number) => {
+  const updateQuantity = useCallback((lineId: string, quantity: number) => {
     if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.variantId !== variantId));
+      setItems((prev) => prev.filter((i) => i.lineId !== lineId));
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.variantId === variantId ? { ...i, quantity } : i)),
+      prev.map((i) => (i.lineId === lineId ? { ...i, quantity } : i)),
     );
   }, []);
 
@@ -151,7 +211,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const totalItems = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
-  const subtotal = useMemo(() => items.reduce((sum, i) => sum + i.price * i.quantity, 0), [items]);
+  const subtotal = useMemo(
+    () =>
+      items.reduce(
+        (sum, i) =>
+          sum + (i.price + (i.customizationSurcharge || 0)) * i.quantity,
+        0,
+      ),
+    [items],
+  );
 
   const value = useMemo(
     () => ({

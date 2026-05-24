@@ -10,6 +10,10 @@ from django.db.models import F
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from apps.customizations.services import (
+    CustomizationError,
+    validate_and_snapshot,
+)
 from apps.products.models import Product, ProductVariant
 
 logger = logging.getLogger(__name__)
@@ -91,6 +95,24 @@ def validate_cart(items):
                 option_parts.append(ov_trans.value)
         option_label = " / ".join(option_parts)
 
+        # Validate any customer-supplied customization input against the
+        # product's field schema. The surcharge is per-unit and folded into
+        # unit_price so Stripe sees the customized price and promotions /
+        # VAT calculations stay consistent with the rest of the flow.
+        submitted_customizations = item.get("customizations") or []
+        try:
+            customizations_snapshot, per_unit_surcharge = validate_and_snapshot(
+                variant.product, submitted_customizations,
+            )
+        except CustomizationError as exc:
+            errors.append({
+                "variant_id": vid,
+                "code": str(exc.message) if hasattr(exc, "message") else "customization.invalid",
+                "details": getattr(exc, "params", {}) or {},
+            })
+            continue
+
+        adjusted_unit_price = variant.price + per_unit_surcharge
         validated.append({
             "variant": variant,
             "product": variant.product,
@@ -98,8 +120,10 @@ def validate_cart(items):
             "image_url": image_url,
             "option_label": option_label,
             "quantity": quantity,
-            "unit_price": variant.price,
-            "line_total": variant.price * quantity,
+            "unit_price": adjusted_unit_price,
+            "line_total": adjusted_unit_price * quantity,
+            "customizations": customizations_snapshot,
+            "customization_surcharge": per_unit_surcharge,
         })
 
     if errors:
@@ -289,6 +313,8 @@ def create_stripe_checkout_session(
             "line_total": item["line_total"],
             "image_url": item["image_url"],
             "fulfillment_type": item["product"].fulfillment_type,
+            "customizations": item.get("customizations", []),
+            "customization_surcharge": item.get("customization_surcharge", 0),
         }
         for item in validated_items
     ]
@@ -426,6 +452,8 @@ def fulfill_order(session):
                 vat_amount=item_vat,
                 image_url=item_data.get("image_url", ""),
                 fulfillment_type=fulfillment_type,
+                customizations=item_data.get("customizations", []),
+                customization_surcharge=item_data.get("customization_surcharge", 0),
             )
 
             # For self-fulfilled items: decrement stock and calculate COGS via FIFO.

@@ -14,15 +14,14 @@ import { getDictionary } from "@/i18n/dictionaries";
 import { getProductBySlug } from "@/hooks/products.server";
 import { getProducts } from "@/hooks/products.server";
 import { getProductAttributes } from "@/hooks/attributes.server";
+import { getProductCustomizations } from "@/hooks/customizations.server";
 import { JsonLd } from "@/lib/json-ld";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { resolveProductRedirect } from "@/lib/slug-redirects";
 import { generateProductSlugParams } from "@/lib/static-params";
 
-import { ImageGallery } from "./_components/image-gallery";
-import { ProductInfo } from "./_components/product-info";
+import { ProductMain } from "./_components/product-main";
 import { ProductTabs } from "./_components/product-tabs";
-import { ShareButtons } from "./_components/share-buttons";
 import { RelatedProducts } from "./_components/related-products";
 
 interface PageProps {
@@ -92,16 +91,20 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const dict = await getDictionary(locale, "product");
 
-  // Fetch attributes and related products in parallel
-  const [attributesResult, relatedResult] = await Promise.allSettled([
+  // Fetch attributes, related products, and customization schema in parallel
+  const [attributesResult, relatedResult, customizationsResult] = await Promise.allSettled([
     getProductAttributes(product.id, locale),
     product.category_ids.length > 0
       ? getProducts({ category: product.category_ids[0], page_size: "5" }, locale)
       : Promise.resolve({ count: 0, next: null, previous: null, results: [] }),
+    product.is_customizable
+      ? getProductCustomizations(product.slug)
+      : Promise.resolve([]),
   ]);
 
   const attributes = attributesResult.status === "fulfilled" ? attributesResult.value : [];
   const relatedRaw = relatedResult.status === "fulfilled" ? relatedResult.value.results : [];
+  const customizationFields = customizationsResult.status === "fulfilled" ? customizationsResult.value : [];
   const relatedProducts = relatedRaw.filter((p) => p.id !== product.id).slice(0, 4);
 
   const minPrice = product.min_price;
@@ -223,21 +226,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <JsonLd data={breadcrumbJsonLd} />
         <Breadcrumbs items={breadcrumbs} />
 
-        {/* Product layout */}
-        <div className="grid gap-8 md:grid-cols-2 md:gap-12">
-          {/* Left — Images */}
-          <div data-animate="fade-up">
-            <ImageGallery images={product.images} productName={product.name} />
-          </div>
-
-          {/* Right — Info + Share */}
-          <div data-animate="fade-up">
-            <ProductInfo product={product} dict={dict.details} />
-            <div className="mt-6 pt-6" style={{ borderTop: "1px solid var(--bg-border)" }}>
-              <ShareButtons url={productUrl} title={product.name} />
-            </div>
-          </div>
-        </div>
+        {/* Product layout — gallery + info, sharing selectedVariantId via the client wrapper. */}
+        <ProductMain
+          product={product}
+          productUrl={productUrl}
+          dict={dict.details}
+          customizationFields={customizationFields}
+        />
 
         {/* Tabs */}
         <ProductTabs

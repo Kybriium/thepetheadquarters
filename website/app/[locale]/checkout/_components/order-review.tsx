@@ -75,7 +75,7 @@ export function OrderReview({
           </span>
           <div className="flex flex-col gap-4">
             {items.map((item) => (
-              <div key={item.variantId} className="flex gap-4" style={{ paddingBottom: "var(--space-4)", borderBottom: "1px solid var(--bg-border)" }}>
+              <div key={item.lineId} className="flex gap-4" style={{ paddingBottom: "var(--space-4)", borderBottom: "1px solid var(--bg-border)" }}>
                 {item.image && (
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md" style={{ background: "var(--bg-tertiary)" }}>
                     <Image src={item.image} alt={item.name} fill sizes="64px" className="object-cover" />
@@ -90,12 +90,24 @@ export function OrderReview({
                       {item.optionLabel}
                     </p>
                   )}
+                  {item.customizationSummary.length > 0 && (
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      {item.customizationSummary.map((c) => (
+                        <p key={c.key} style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--gold-dark)" }}>
+                          <span style={{ fontWeight: 600 }}>{c.label}:</span> {c.label_value}
+                          {c.surcharge_pence > 0 && (
+                            <span style={{ color: "var(--white-faint)" }}> (+{formatPrice(c.surcharge_pence)})</span>
+                          )}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                   <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-xs)", color: "var(--white-faint)" }}>
                     Qty: {item.quantity}
                   </p>
                 </div>
                 <p style={{ fontFamily: "var(--font-montserrat)", fontSize: "var(--text-sm)", fontWeight: "var(--weight-semibold)", color: "var(--white)" }}>
-                  {formatPrice(item.price * item.quantity)}
+                  {formatPrice((item.price + item.customizationSurcharge) * item.quantity)}
                 </p>
               </div>
             ))}

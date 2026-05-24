@@ -9,6 +9,7 @@ import {
   useDeleteImage,
   useUpdateImage,
   type AdminProductImage,
+  type AdminVariant,
 } from "@/hooks/use-admin-products";
 import { endpoints } from "@/config/endpoints";
 import { ConfirmModal } from "../../../_components/confirm-modal";
@@ -16,6 +17,13 @@ import { ConfirmModal } from "../../../_components/confirm-modal";
 interface ImagesManagerProps {
   productId: string;
   images: AdminProductImage[];
+  /** Optional — when provided, each image gets a "Belongs to variant" picker. */
+  variants?: AdminVariant[];
+}
+
+function variantLabel(v: AdminVariant): string {
+  const opts = v.option_values?.map((ov) => ov.label).join(" / ");
+  return opts ? `${opts} (${v.sku})` : v.sku;
 }
 
 const API_HOST = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(
@@ -36,7 +44,7 @@ function resolveImageUrl(url: string): string {
 
 type Mode = "upload" | "url";
 
-export function ImagesManager({ productId, images }: ImagesManagerProps) {
+export function ImagesManager({ productId, images, variants = [] }: ImagesManagerProps) {
   const addMutation = useAddImage(productId);
   const deleteMutation = useDeleteImage(productId);
   const updateMutation = useUpdateImage(productId);
@@ -51,11 +59,21 @@ export function ImagesManager({ productId, images }: ImagesManagerProps) {
     }
   }
 
+  async function handleSetVariant(imageId: string, variantId: string | null) {
+    try {
+      await updateMutation.mutateAsync({ imageId, data: { variant_id: variantId } });
+      toast.success(variantId ? "Linked to variant" : "Unlinked");
+    } catch {
+      toast.danger("Failed");
+    }
+  }
+
   const [showForm, setShowForm] = useState(false);
   const [mode, setMode] = useState<Mode>("upload");
   const [url, setUrl] = useState("");
   const [altText, setAltText] = useState("");
   const [isPrimary, setIsPrimary] = useState(false);
+  const [variantId, setVariantId] = useState<string>(""); // "" means none
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<AdminProductImage | null>(null);
 
@@ -63,6 +81,7 @@ export function ImagesManager({ productId, images }: ImagesManagerProps) {
     setUrl("");
     setAltText("");
     setIsPrimary(false);
+    setVariantId("");
     setShowForm(false);
     setMode("upload");
   }
@@ -102,6 +121,7 @@ export function ImagesManager({ productId, images }: ImagesManagerProps) {
         alt_text: altText,
         is_primary: isPrimary,
         sort_order: images.length,
+        variant_id: variantId || null,
       });
 
       toast.success("Image uploaded");
@@ -124,6 +144,7 @@ export function ImagesManager({ productId, images }: ImagesManagerProps) {
         alt_text: altText,
         is_primary: isPrimary,
         sort_order: images.length,
+        variant_id: variantId || null,
       });
       toast.success("Image added");
       reset();
@@ -189,6 +210,25 @@ export function ImagesManager({ productId, images }: ImagesManagerProps) {
                   <Trash2 size={12} />
                 </button>
               </div>
+              {variants.length > 0 && (
+                <div className="mt-2">
+                  <label style={{ fontFamily: "var(--font-montserrat)", fontSize: 9, color: "var(--white-faint)", textTransform: "uppercase", letterSpacing: "var(--tracking-wide)", display: "block", marginBottom: 4 }}>
+                    Variant
+                  </label>
+                  <select
+                    value={img.variant || ""}
+                    onChange={(e) => handleSetVariant(img.id, e.target.value || null)}
+                    style={{ background: "var(--bg-tertiary)", border: "1px solid var(--bg-border)", color: "var(--white)", fontFamily: "var(--font-montserrat)", fontSize: 11, borderRadius: "var(--radius-sm)", padding: "4px 6px", width: "100%" }}
+                  >
+                    <option value="">All variants</option>
+                    {variants.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {variantLabel(v)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -248,6 +288,21 @@ export function ImagesManager({ productId, images }: ImagesManagerProps) {
               <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} style={{ accentColor: "var(--gold)" }} />
               Primary image
             </label>
+
+            {variants.length > 0 && (
+              <div>
+                <label style={labelStyle}>Belongs to variant (optional)</label>
+                <select value={variantId} onChange={(e) => setVariantId(e.target.value)} style={inputStyle}>
+                  <option value="">— Shown for all variants —</option>
+                  {variants.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {variantLabel(v)}
+                    </option>
+                  ))}
+                </select>
+                <p style={hintStyle}>When a customer selects this variant, the gallery will switch to images tagged with it.</p>
+              </div>
+            )}
 
             {mode === "upload" ? (
               <div>

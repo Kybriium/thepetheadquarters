@@ -25,6 +25,10 @@ export const endpoints = {
     list: `${API_BASE}/attributes/`,
     byProduct: (productId: string) => `${API_BASE}/attributes/product/${productId}/`,
   },
+  customizations: {
+    byProduct: (slug: string) => `${API_BASE}/products/${slug}/customizations/`,
+    upload: `${API_BASE}/customizations/upload/`,
+  },
   newsletter: {
     subscribe: `${API_BASE}/newsletter/subscribe/`,
   },
@@ -87,9 +91,19 @@ export const endpoints = {
     },
     variants: {
       detail: (id: string) => `${API_BASE}/admin/variants/${id}/`,
+      bulk: (productId: string) => `${API_BASE}/admin/products/${productId}/variants/bulk/`,
     },
     images: {
       detail: (id: string) => `${API_BASE}/admin/images/${id}/`,
+    },
+    optionTypes: {
+      list: `${API_BASE}/admin/option-types/`,
+      detail: (id: string) => `${API_BASE}/admin/option-types/${id}/`,
+      values: (id: string) => `${API_BASE}/admin/option-types/${id}/values/`,
+      value: (id: string) => `${API_BASE}/admin/option-values/${id}/`,
+      forProduct: (productId: string) => `${API_BASE}/admin/products/${productId}/option-types/`,
+      productLink: (productId: string, linkId: string) =>
+        `${API_BASE}/admin/products/${productId}/option-types/${linkId}/`,
     },
     inventory: {
       list: `${API_BASE}/admin/inventory/`,
@@ -159,6 +173,19 @@ export const endpoints = {
     upload: {
       image: `${API_BASE}/admin/upload/image/`,
       info: `${API_BASE}/admin/upload/info/`,
+    },
+    customizations: {
+      templates: `${API_BASE}/admin/customizations/templates/`,
+      template: (id: string) => `${API_BASE}/admin/customizations/templates/${id}/`,
+      templateFields: (id: string) => `${API_BASE}/admin/customizations/templates/${id}/fields/`,
+      field: (id: string) => `${API_BASE}/admin/customizations/fields/${id}/`,
+      fieldOptions: (id: string) => `${API_BASE}/admin/customizations/fields/${id}/options/`,
+      option: (id: string) => `${API_BASE}/admin/customizations/options/${id}/`,
+      forProduct: (productId: string) => `${API_BASE}/admin/products/${productId}/customizations/`,
+      productAttachment: (productId: string, linkId: string) =>
+        `${API_BASE}/admin/products/${productId}/customizations/${linkId}/`,
+      productFields: (productId: string) =>
+        `${API_BASE}/admin/products/${productId}/customizations/fields/`,
     },
   },
 } as const;

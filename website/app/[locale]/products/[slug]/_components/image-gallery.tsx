@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import type { ProductImage } from "@/types/product";
@@ -8,17 +8,53 @@ import type { ProductImage } from "@/types/product";
 interface ImageGalleryProps {
   images: ProductImage[];
   productName: string;
+  /**
+   * When a variant is selected, images tagged to that variant are surfaced
+   * first and the thumbnail strip shows them at the front. Variant-agnostic
+   * images (no `variant`) always remain visible so the gallery never goes
+   * empty — even if a brand-new variant has no photos of its own.
+   */
+  selectedVariantId?: string | null;
 }
 
-export function ImageGallery({ images, productName }: ImageGalleryProps) {
-  const sorted = [...images].sort((a, b) => {
-    if (a.is_primary && !b.is_primary) return -1;
-    if (!a.is_primary && b.is_primary) return 1;
-    return a.sort_order - b.sort_order;
-  });
+export function ImageGallery({ images, productName, selectedVariantId }: ImageGalleryProps) {
+  /**
+   * Ordering rule:
+   *  1. Images tagged to the active variant come first (in their sort_order).
+   *  2. Variant-agnostic images (`variant === null`) fill in next.
+   *  3. Images tagged to OTHER variants are hidden — they belong to a
+   *     different swatch and would confuse the customer.
+   *
+   * Falls back to the previous behavior (primary-first, then sort_order)
+   * when no variant is selected, so list pages or no-variant products are
+   * unchanged.
+   */
+  const sorted = useMemo(() => {
+    const byPrimary = (a: ProductImage, b: ProductImage) => {
+      if (a.is_primary && !b.is_primary) return -1;
+      if (!a.is_primary && b.is_primary) return 1;
+      return a.sort_order - b.sort_order;
+    };
+
+    if (!selectedVariantId) {
+      return [...images].sort(byPrimary);
+    }
+
+    const forVariant = images.filter((i) => i.variant === selectedVariantId);
+    const agnostic = images.filter((i) => !i.variant);
+    return [...forVariant.sort(byPrimary), ...agnostic.sort(byPrimary)];
+  }, [images, selectedVariantId]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // Whenever the variant changes, snap to the first image (a variant-tagged
+  // one if present, otherwise the first agnostic shot) so the customer
+  // immediately sees their selection.
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [selectedVariantId]);
+
   const activeImage = sorted[activeIndex];
 
   const goNext = useCallback(() => {

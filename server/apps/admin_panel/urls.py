@@ -17,8 +17,17 @@ from apps.admin_panel.views.products import (
     AdminProductDetailView,
     AdminProductImagesView,
     AdminProductListView,
+    AdminProductVariantsBulkView,
     AdminProductVariantsView,
     AdminVariantDetailView,
+)
+from apps.admin_panel.views.option_types import (
+    AdminOptionTypeDetailView,
+    AdminOptionTypeListView,
+    AdminOptionTypeValuesView,
+    AdminOptionValueDetailView,
+    AdminProductOptionTypeDetailView,
+    AdminProductOptionTypesView,
 )
 from apps.admin_panel.views.inventory import (
     AdminInventoryBatchesView,
@@ -69,6 +78,17 @@ from apps.admin_panel.views.analytics import (
     AdminAnalyticsVisitorListView,
 )
 from apps.admin_panel.views.upload import AdminImageUploadView, AdminUploadInfoView
+from apps.admin_panel.views.customizations import (
+    AdminCustomizationTemplateDetailView,
+    AdminCustomizationTemplateListView,
+    AdminFieldDetailView,
+    AdminFieldOptionDetailView,
+    AdminFieldOptionsView,
+    AdminProductCustomizationDetailView,
+    AdminProductCustomizationsView,
+    AdminProductFieldsView,
+    AdminTemplateFieldsView,
+)
 from apps.admin_panel.views.reports import (
     AdminInventoryValuationView,
     AdminPromotionsReportView,
@@ -98,9 +118,18 @@ urlpatterns = [
     path("products/", AdminProductListView.as_view()),
     path("products/<uuid:product_id>/", AdminProductDetailView.as_view()),
     path("products/<uuid:product_id>/variants/", AdminProductVariantsView.as_view()),
+    path("products/<uuid:product_id>/variants/bulk/", AdminProductVariantsBulkView.as_view()),
+    path("products/<uuid:product_id>/option-types/", AdminProductOptionTypesView.as_view()),
+    path("products/<uuid:product_id>/option-types/<uuid:link_id>/", AdminProductOptionTypeDetailView.as_view()),
     path("products/<uuid:product_id>/images/", AdminProductImagesView.as_view()),
     path("variants/<uuid:variant_id>/", AdminVariantDetailView.as_view()),
     path("images/<uuid:image_id>/", AdminImageDetailView.as_view()),
+
+    # Option Types (global axes: Size, Color, etc.)
+    path("option-types/", AdminOptionTypeListView.as_view()),
+    path("option-types/<uuid:option_type_id>/", AdminOptionTypeDetailView.as_view()),
+    path("option-types/<uuid:option_type_id>/values/", AdminOptionTypeValuesView.as_view()),
+    path("option-values/<uuid:value_id>/", AdminOptionValueDetailView.as_view()),
 
     # Inventory
     path("inventory/", AdminInventoryListView.as_view()),
@@ -156,6 +185,17 @@ urlpatterns = [
     # Uploads
     path("upload/info/", AdminUploadInfoView.as_view()),
     path("upload/image/", AdminImageUploadView.as_view()),
+
+    # Customizations
+    path("customizations/templates/", AdminCustomizationTemplateListView.as_view()),
+    path("customizations/templates/<uuid:template_id>/", AdminCustomizationTemplateDetailView.as_view()),
+    path("customizations/templates/<uuid:template_id>/fields/", AdminTemplateFieldsView.as_view()),
+    path("customizations/fields/<uuid:field_id>/", AdminFieldDetailView.as_view()),
+    path("customizations/fields/<uuid:field_id>/options/", AdminFieldOptionsView.as_view()),
+    path("customizations/options/<uuid:option_id>/", AdminFieldOptionDetailView.as_view()),
+    path("products/<uuid:product_id>/customizations/", AdminProductCustomizationsView.as_view()),
+    path("products/<uuid:product_id>/customizations/<uuid:link_id>/", AdminProductCustomizationDetailView.as_view()),
+    path("products/<uuid:product_id>/customizations/fields/", AdminProductFieldsView.as_view()),
 
     # Reports
     path("reports/sales/", AdminSalesReportView.as_view()),

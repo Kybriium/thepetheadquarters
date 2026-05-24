@@ -184,6 +184,18 @@ class OrderItem(BaseModel):
     # COGS — populated on fulfillment from FIFO consumption
     cogs_amount = models.PositiveIntegerField(default=0)
 
+    # Customer-supplied personalization snapshot (engraved name, uploaded
+    # image URL, position choice, etc.). Stored as a list of dicts:
+    #   [{key, label, field_type, value, label_value,
+    #     surcharge_pence, image_public_id?}, ...]
+    # Each dict is a frozen snapshot at order time so renamed/deleted fields
+    # later don't change what the customer ordered. Empty list = not customized.
+    customizations = models.JSONField(default=list, blank=True)
+    customization_surcharge = models.PositiveIntegerField(
+        default=0,
+        help_text="Per-unit surcharge from customizations, already folded into unit_price.",
+    )
+
     # Per-item fulfillment for mixed self/dropship orders
     fulfillment_type = models.CharField(max_length=10, default="self")
     fulfillment_status = models.CharField(

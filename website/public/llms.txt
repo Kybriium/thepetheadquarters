@@ -15,7 +15,7 @@ The store is structured around three browse axes: by category (e.g. dogs, cats, 
 ## Information
 
 - [About](https://thepetheadquarters.co.uk/about): Company background, sourcing standards, and customer commitments.
-- [Contact](https://thepetheadquarters.co.uk/contact): Customer support email and contact form. Support email: hello@thepetheadquarters.co.uk.
+- [Contact](https://thepetheadquarters.co.uk/contact): Customer support email and contact form. Support email: contact@thepetheadquarters.co.uk.
 
 ## Legal and policies
 

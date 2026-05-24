@@ -189,7 +189,7 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL",
-    default="noreply@thepetheadquarters.co.uk",
+    default="contact@thepetheadquarters.co.uk",
 )
 
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")

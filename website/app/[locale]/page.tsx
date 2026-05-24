@@ -47,7 +47,7 @@ const organizationJsonLd: WithContext<Organization> = {
     {
       "@type": "ContactPoint",
       contactType: "customer support",
-      email: "hello@thepetheadquarters.co.uk",
+      email: "contact@thepetheadquarters.co.uk",
       areaServed: "GB",
       availableLanguage: ["en"],
     },

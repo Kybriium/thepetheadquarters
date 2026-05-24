@@ -166,7 +166,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # ---------------------------------------------------------------------------
 from datetime import timedelta  # noqa: E402
 
-JWT_ACCESS_TOKEN_LIFETIME = timedelta(minutes=15)
+# Access token: kept relatively short so a stolen access cookie can't be
+# replayed for long, but generous enough that an active session doesn't
+# trigger a refresh every few minutes. 60 min is the industry-standard
+# middle ground.
+JWT_ACCESS_TOKEN_LIFETIME = timedelta(minutes=60)
 JWT_REFRESH_TOKEN_LIFETIME = timedelta(days=7)
 JWT_ALGORITHM = "HS256"
 

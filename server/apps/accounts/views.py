@@ -49,6 +49,7 @@ from apps.accounts.tokens import (
     TokenError,
     clear_auth_cookies,
     decode_token,
+    set_access_cookie_only,
     set_auth_cookies,
 )
 
@@ -166,8 +167,6 @@ class TokenRefreshView(APIView):
             clear_auth_cookies(response)
             return response
 
-        stored_token.revoke()
-
         try:
             user = User.objects.get(id=payload["user_id"], is_active=True)
         except User.DoesNotExist:
@@ -175,8 +174,13 @@ class TokenRefreshView(APIView):
             clear_auth_cookies(response)
             return response
 
+        # Don't rotate the refresh token on each use. Concurrent refresh
+        # calls (multi-tab + api-client 401 retries) would otherwise race
+        # to revoke each other and one tab would get logged out. Keep the
+        # refresh token alive for its full 7-day lifetime; rotation only
+        # happens on a fresh login or explicit logout.
         response = success_response(data=ProfileSerializer(user).data)
-        set_auth_cookies(response, user)
+        set_access_cookie_only(response, user)
         return response
 
 

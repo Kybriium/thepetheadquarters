@@ -132,6 +132,33 @@ def set_auth_cookies(response, user):
     return response
 
 
+def set_access_cookie_only(response, user):
+    """
+    Issue a fresh access token cookie WITHOUT rotating the refresh token.
+
+    Used by TokenRefreshView so concurrent refresh calls (multiple tabs,
+    AuthProvider + api-client 401 retry firing in parallel) don't race
+    to revoke each other's refresh tokens. The refresh token retains its
+    original 7-day expiry; only login + explicit logout rotate it.
+    """
+    access_token = generate_access_token(user)
+
+    is_production = _get_setting("DJANGO_ENV", "development") == "production"
+    access_lifetime = _get_setting("JWT_ACCESS_TOKEN_LIFETIME", timedelta(minutes=15))
+    samesite_policy = "None" if is_production else "Lax"
+
+    response.set_cookie(
+        key="tph_access",
+        value=access_token,
+        max_age=int(access_lifetime.total_seconds()),
+        httponly=True,
+        secure=is_production,
+        samesite=samesite_policy,
+        path="/api/",
+    )
+    return response
+
+
 def clear_auth_cookies(response):
     """Remove both auth cookies from the response."""
     response.delete_cookie("tph_access", path="/api/")

@@ -10,7 +10,11 @@ class LoginThrottle(AnonRateThrottle):
 
 
 class TokenRefreshThrottle(AnonRateThrottle):
-    rate = "30/minute"
+    # Generous headroom — a single active user with multiple tabs can
+    # easily fire >30 refreshes/min during regular browsing (every page
+    # load + every authed XHR that 401s triggers one). Hitting the
+    # throttle was making AuthProvider give up and clear the session.
+    rate = "120/minute"
 
 
 class VerifyEmailThrottle(AnonRateThrottle):

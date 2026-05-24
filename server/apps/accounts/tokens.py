@@ -96,13 +96,26 @@ def set_auth_cookies(response, user):
     access_lifetime = _get_setting("JWT_ACCESS_TOKEN_LIFETIME", timedelta(minutes=15))
     refresh_lifetime = _get_setting("JWT_REFRESH_TOKEN_LIFETIME", timedelta(days=7))
 
+    # SameSite policy:
+    #   - Production: "None" because the frontend (Vercel / custom domain)
+    #     and backend (Railway / api subdomain) are on different eTLD+1
+    #     sites for the browser, so the cookie must explicitly opt in to
+    #     cross-site sending. SameSite=None requires Secure=True, which
+    #     we already get from is_production. Without this, cookies set on
+    #     login don't get sent on subsequent XHR fetches and the user
+    #     appears authenticated to the frontend but anonymous to the API.
+    #   - Development: "Lax" — localhost:3000 ↔ localhost:8000 is same-site
+    #     (eTLD+1 is "localhost") and Chrome rejects SameSite=None on
+    #     non-HTTPS anyway, so Lax is the only thing that works locally.
+    samesite_policy = "None" if is_production else "Lax"
+
     response.set_cookie(
         key="tph_access",
         value=access_token,
         max_age=int(access_lifetime.total_seconds()),
         httponly=True,
         secure=is_production,
-        samesite="Lax",
+        samesite=samesite_policy,
         path="/api/",
     )
 
@@ -112,7 +125,7 @@ def set_auth_cookies(response, user):
         max_age=int(refresh_lifetime.total_seconds()),
         httponly=True,
         secure=is_production,
-        samesite="Lax",
+        samesite=samesite_policy,
         path="/api/v1/auth/",
     )
 

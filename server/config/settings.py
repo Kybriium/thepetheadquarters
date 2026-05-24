@@ -357,7 +357,12 @@ if _railway_host:
     _railway_origin = f"https://{_railway_host}"
     if _railway_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_railway_origin)
-CSRF_COOKIE_SAMESITE = "Lax"
+# Production gets SameSite=None so the CSRF cookie flows on cross-site
+# fetches from the Vercel frontend (different eTLD+1 to the Railway
+# backend). SameSite=None requires Secure=True — set in the production
+# block below. Dev stays Lax since same-site localhost works fine and
+# Chrome rejects SameSite=None on non-HTTPS connections.
+CSRF_COOKIE_SAMESITE = "None" if DJANGO_ENV == "production" else "Lax"
 CSRF_COOKIE_HTTPONLY = False
 
 # ---------------------------------------------------------------------------
@@ -394,9 +399,11 @@ if DJANGO_ENV == "production":
     # to the app with X-Forwarded-Proto: https. Without this header Django
     # would think every request is insecure and reject secure-only cookies.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    # Send Secure-flag JWT cookies (auth cookies are set by
-    # apps.accounts.authentication — these toggles are the global flags).
-    SESSION_COOKIE_SAMESITE = "Lax"
+    # Session cookie also goes cross-site (frontend on the brand domain
+    # talking to backend on a Railway subdomain), so SameSite=None+Secure.
+    # Same reasoning as CSRF_COOKIE_SAMESITE and the JWT cookies in
+    # apps.accounts.tokens.set_auth_cookies.
+    SESSION_COOKIE_SAMESITE = "None"
     # HSTS — only enable when you're 100% on HTTPS. Railway is. 1 year max-age.
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True

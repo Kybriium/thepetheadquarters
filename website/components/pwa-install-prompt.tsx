@@ -3,23 +3,27 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Download, X, Share, PlusSquare } from "lucide-react";
+import {
+  consumeForceOpen,
+  triggerNativePrompt,
+  usePwaInstall,
+} from "@/lib/pwa-install";
 
 /**
  * Custom PWA install banner.
  *
  * Browsers don't reliably show their built-in install prompt anymore —
- * Chrome only triggers it after specific engagement heuristics, Brave's
- * Shields suppress it most of the time, Safari never fires
- * `beforeinstallprompt` at all. This component:
+ * Chrome only triggers it after engagement heuristics, Brave's Shields
+ * suppress it most of the time, Safari never fires `beforeinstallprompt`
+ * at all. This component:
  *
- *   1. Captures the `beforeinstallprompt` event when the browser fires it
- *      (Chrome / Edge / Brave when Shields permit) and shows a custom
- *      install button — clicking it triggers the OS install dialog.
- *   2. On iOS Safari (no install event), shows static "Share → Add to
- *      Home Screen" instructions instead of an install button.
- *   3. Never appears until the cookie notice has been dismissed — so we
- *      don't pile two popups on a first-time visitor.
+ *   1. Reads the shared install state from `lib/pwa-install` (which owns
+ *      the `beforeinstallprompt` listener once for the whole app).
+ *   2. Auto-shows after the cookie notice is dismissed, on first visit.
+ *   3. Re-shows on demand when the footer "Install app" link is clicked
+ *      (via the `forceOpen` flag).
  *   4. Hides for 30 days when dismissed; hides forever once installed.
+ *   5. On iOS Safari shows static "Share → Add to Home Screen" instructions.
  *
  * Mounts at the root of the app from providers.tsx alongside CookieNotice.
  */
@@ -28,60 +32,34 @@ const COOKIE_DISMISSED_KEY = "tph-cookie-notice-dismissed";
 const INSTALL_DISMISSED_KEY = "tph-install-prompt-dismissed";
 const DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-}
-
 export function PwaInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isIosSafari, setIsIosSafari] = useState(false);
+  const { canInstall, isIosSafari, isInstalled, forceOpen } = usePwaInstall();
   const [visible, setVisible] = useState(false);
 
   // ---------------------------------------------------------------------
-  // Capture the install event when the browser fires it. Calling
-  // preventDefault() stops the browser's built-in mini-info-bar so we
-  // can show our own UI instead.
-  // ---------------------------------------------------------------------
-  useEffect(() => {
-    function onBeforeInstall(e: Event) {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    }
-    window.addEventListener("beforeinstallprompt", onBeforeInstall as EventListener);
-    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall as EventListener);
-  }, []);
-
-  // ---------------------------------------------------------------------
-  // Detect iOS Safari — no install event, but PWA add-to-homescreen
-  // is supported via Share menu so we can render instructions.
-  // ---------------------------------------------------------------------
-  useEffect(() => {
-    if (typeof navigator === "undefined") return;
-    const ua = navigator.userAgent;
-    const isApple = /iPhone|iPad|iPod/.test(ua);
-    const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
-    setIsIosSafari(isApple && isSafari);
-  }, []);
-
-  // ---------------------------------------------------------------------
-  // Decide when to actually show the popup.
-  // Polls localStorage every second waiting for the cookie notice to be
-  // dismissed, then unblocks. Stops polling after 60s either way to
-  // avoid running forever in the background.
+  // Decide when to show. Two trigger paths:
+  //   (a) auto: cookie notice dismissed + canInstall (or iOS) + not
+  //       previously dismissed within TTL + not already installed
+  //   (b) forced: user clicked the footer "Install app" link, which
+  //       clears the dismissal record and flips forceOpen — we honour it
+  //       immediately, bypassing the cookie-notice and TTL gates.
   // ---------------------------------------------------------------------
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // Already installed (running standalone) → never show
-    if (window.matchMedia?.("(display-mode: standalone)").matches) return;
-    // iOS standalone detection
-    if (typeof (navigator as Navigator & { standalone?: boolean }).standalone === "boolean"
-        && (navigator as Navigator & { standalone?: boolean }).standalone) {
+    if (isInstalled) {
+      setVisible(false);
       return;
     }
+    // Forced re-open from the footer link — show now, no other checks.
+    if (forceOpen) {
+      setVisible(true);
+      consumeForceOpen();
+      return;
+    }
+    // Auto path: only show if we can actually install on this browser.
+    if (!canInstall && !isIosSafari) return;
 
-    // Previously dismissed and still within TTL → respect that
+    // Respect TTL if user dismissed previously
     try {
       const dismissedAt = parseInt(localStorage.getItem(INSTALL_DISMISSED_KEY) || "0", 10);
       if (dismissedAt && Date.now() - dismissedAt < DISMISS_TTL_MS) return;
@@ -90,10 +68,6 @@ export function PwaInstallPrompt() {
     }
 
     function tryReveal(): boolean {
-      // Must have either a captured install event OR be on iOS Safari
-      // (we never show on browsers that can't install at all, e.g. Firefox desktop)
-      if (!deferredPrompt && !isIosSafari) return false;
-      // Cookie notice must be dismissed first
       try {
         if (!localStorage.getItem(COOKIE_DISMISSED_KEY)) return false;
       } catch {
@@ -113,7 +87,7 @@ export function PwaInstallPrompt() {
       clearInterval(interval);
       clearTimeout(stop);
     };
-  }, [deferredPrompt, isIosSafari]);
+  }, [canInstall, isIosSafari, isInstalled, forceOpen]);
 
   function dismiss() {
     try {
@@ -125,22 +99,14 @@ export function PwaInstallPrompt() {
   }
 
   async function handleInstall() {
-    if (!deferredPrompt) return;
+    const outcome = await triggerNativePrompt();
     setVisible(false);
-    try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome !== "accepted") {
-        // User saw the native prompt and declined → respect for 30 days
-        dismiss();
-      }
-      // If accepted, browser fires `appinstalled` and the standalone-mode
-      // check above will skip the banner from now on.
-    } catch {
-      // prompt() can only be called once — if it fails just hide
-    } finally {
-      setDeferredPrompt(null);
+    if (outcome === "dismissed") {
+      // User saw the native prompt and declined → respect for 30 days
+      dismiss();
     }
+    // "accepted" → browser fires `appinstalled` and the hook reports installed
+    // "unavailable" → shouldn't happen since we gate on canInstall
   }
 
   if (!visible) return null;

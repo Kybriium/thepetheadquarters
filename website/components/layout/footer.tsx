@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Download } from "lucide-react";
 import { useSiteLegal } from "@/hooks/use-site-legal";
+import {
+  openInstallPrompt,
+  triggerNativePrompt,
+  usePwaInstall,
+} from "@/lib/pwa-install";
 
 interface FooterProps {
   dict: {
@@ -31,6 +36,21 @@ export function Footer({ dict, navDict }: FooterProps) {
   // identity on the website. Surfaced once via the public /site/legal/
   // endpoint and rendered in the footer (visible on every page).
   const legal = useSiteLegal();
+  // PWA install — show only when the browser can actually install. Hides
+  // for users on Firefox desktop, already-installed apps, etc.
+  const { canInstall, isIosSafari, isInstalled } = usePwaInstall();
+  const canShowInstallLink = !isInstalled && (canInstall || isIosSafari);
+
+  async function handleInstallClick() {
+    if (canInstall) {
+      // Chrome / Edge / Brave — go straight to the native install dialog
+      await triggerNativePrompt();
+    } else if (isIosSafari) {
+      // iOS Safari has no install event — reopen the popup so the user
+      // sees the "Share → Add to Home Screen" instructions again.
+      openInstallPrompt();
+    }
+  }
 
   const columns = [
     {
@@ -101,20 +121,38 @@ export function Footer({ dict, navDict }: FooterProps) {
             </p>
           </div>
 
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="group flex items-center gap-2 transition-all duration-300 hover:text-[var(--gold)]"
-            style={{
-              fontFamily: "var(--font-montserrat)",
-              fontSize: "var(--text-xs)",
-              color: "var(--white-faint)",
-              letterSpacing: "var(--tracking-wider)",
-              textTransform: "uppercase",
-            }}
-          >
-            Back to top
-            <ArrowUpRight size={14} className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-          </button>
+          <div className="flex flex-col items-end gap-3">
+            {canShowInstallLink && (
+              <button
+                onClick={handleInstallClick}
+                className="group flex items-center gap-2 transition-all duration-300 hover:text-[var(--gold)]"
+                style={{
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: "var(--text-xs)",
+                  color: "var(--gold-dark)",
+                  letterSpacing: "var(--tracking-wider)",
+                  textTransform: "uppercase",
+                }}
+              >
+                <Download size={14} />
+                Install app
+              </button>
+            )}
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="group flex items-center gap-2 transition-all duration-300 hover:text-[var(--gold)]"
+              style={{
+                fontFamily: "var(--font-montserrat)",
+                fontSize: "var(--text-xs)",
+                color: "var(--white-faint)",
+                letterSpacing: "var(--tracking-wider)",
+                textTransform: "uppercase",
+              }}
+            >
+              Back to top
+              <ArrowUpRight size={14} className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </button>
+          </div>
         </div>
 
         {/* Columns */}

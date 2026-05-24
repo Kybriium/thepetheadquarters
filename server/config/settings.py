@@ -334,6 +334,14 @@ CORS_ALLOWED_ORIGINS = config(
     default="http://localhost:3000",
     cast=Csv(),
 )
+# Vercel gives the same project three URL shapes — the production
+# `<project>.vercel.app`, the git-branch `<project>-git-<branch>-<team>.vercel.app`,
+# and a unique-per-deploy `<project>-<hash>-<team>.vercel.app`. Listing the
+# deploy-hash URL doesn't scale because it changes every push, so we accept
+# a comma-separated list of regex patterns from env (anchored with ^ / $).
+_cors_regexes = config("CORS_ALLOWED_ORIGIN_REGEXES", default="", cast=Csv())
+if _cors_regexes:
+    CORS_ALLOWED_ORIGIN_REGEXES = _cors_regexes
 CORS_ALLOW_CREDENTIALS = True
 
 # ---------------------------------------------------------------------------

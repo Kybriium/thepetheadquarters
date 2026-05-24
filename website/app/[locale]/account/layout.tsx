@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EmailVerificationBanner } from "./_components/email-verification-banner";
 
 /**
  * All /account/* pages are per-customer and should never be indexed.
@@ -10,5 +11,13 @@ export const metadata: Metadata = {
 };
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      {/* Persistent verification reminder across every account page. The
+          banner renders nothing for verified users, so it's safe to always
+          mount here without conditional logic in child pages. */}
+      <EmailVerificationBanner />
+      {children}
+    </>
+  );
 }

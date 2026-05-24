@@ -36,6 +36,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "django_filters",
     "corsheaders",
+    "anymail",
 ]
 
 LOCAL_APPS = [
@@ -182,11 +183,24 @@ EMAIL_BACKEND = config(
     "EMAIL_BACKEND",
     default="django.core.mail.backends.console.EmailBackend",
 )
+# Legacy SMTP settings — kept as a fallback in case someone wants to use a
+# self-hosted SMTP server. The actively recommended path in production is
+# anymail.backends.resend.EmailBackend (HTTP-based, dodges firewall + port
+# issues on hosts that throttle outbound SMTP).
 EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = True
+# Defensive: cap the SMTP socket wait so a stalled connection doesn't tie
+# up a gunicorn worker for the OS default (~75s) and trip the 60s timeout.
+EMAIL_TIMEOUT = 10
+
+# Anymail (Resend HTTP API). Reads RESEND_API_KEY at send time; harmless if
+# the SMTP backend is the one actually being used.
+ANYMAIL = {
+    "RESEND_API_KEY": config("RESEND_API_KEY", default=""),
+}
 DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL",
     default="contact@thepetheadquarters.co.uk",

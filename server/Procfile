@@ -1,2 +1,1 @@
-web: uv run gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 3 --timeout 60 --access-logfile - --error-logfile -
-release: uv run python manage.py migrate --noinput && uv run python manage.py collectstatic --noinput
+web: uv run python manage.py migrate --noinput && uv run python manage.py collectstatic --noinput && uv run gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 3 --timeout 60 --access-logfile - --error-logfile -

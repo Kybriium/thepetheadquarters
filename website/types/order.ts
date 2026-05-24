@@ -42,6 +42,8 @@ export interface Order {
   total: number;
   created_at: string;
   paid_at: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
   items: OrderItem[];
   shipping_full_name: string;
   shipping_address_line_1: string;
@@ -50,6 +52,14 @@ export interface Order {
   shipping_county: string;
   shipping_postcode: string;
   shipping_country: string;
+  /** Carrier slug, empty until the order ships. */
+  tracking_carrier: string;
+  /** Human-readable carrier name, e.g. "Royal Mail". */
+  tracking_carrier_display: string;
+  tracking_number: string;
+  /** Resolved tracking URL — derived from carrier+number for known couriers,
+   *  or the raw URL the admin entered for "Other". Empty until shipped. */
+  tracking_link: string;
 }
 
 export interface OrderListItem {

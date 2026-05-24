@@ -1,5 +1,7 @@
 {% extends "orders/emails/_base.html" %}
 
+{% block preheader %}{{ site_name }} order {{ order.order_number }} — we've started preparing it for dispatch.{% endblock %}
+
 {% block headline %}We're preparing your order{% endblock %}
 
 {% block intro %}
@@ -7,5 +9,3 @@
   Good news — we've started preparing your order for dispatch. We'll let you know as soon as it's on its way.
 </p>
 {% endblock %}
-
-{% block cta %}View Order{% endblock %}

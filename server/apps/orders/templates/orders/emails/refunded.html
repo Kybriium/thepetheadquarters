@@ -1,5 +1,7 @@
 {% extends "orders/emails/_base.html" %}
 
+{% block preheader %}A refund of {{ refund_display }} has been issued for order {{ order.order_number }}.{% endblock %}
+
 {% block headline %}Refund issued{% endblock %}
 
 {% block intro %}
@@ -10,5 +12,3 @@
   Refunds typically take 3–5 business days to appear on your statement, depending on your bank.
 </p>
 {% endblock %}
-
-{% block cta %}View Order{% endblock %}

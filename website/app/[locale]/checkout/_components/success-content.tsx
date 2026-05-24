@@ -9,6 +9,7 @@ import { track } from "@/lib/analytics";
 import type { Order } from "@/types/order";
 import { endpoints } from "@/config/endpoints";
 import { PrintReceiptButton, Receipt } from "@/components/orders/receipt";
+import { TrackingCard } from "@/components/orders/tracking-card";
 import type enCheckout from "@/i18n/dictionaries/en/checkout.json";
 
 interface SuccessContentProps {
@@ -105,6 +106,12 @@ export function SuccessContent({ dict, sessionId }: SuccessContentProps) {
         </div>
       ) : order ? (
         <>
+          {/* If the customer hits the success URL after the order has
+              shipped (e.g. they bookmarked it), surface tracking above
+              the receipt — same UX as the account order detail page. */}
+          <div className="mb-6">
+            <TrackingCard order={order} />
+          </div>
           <Receipt order={order} />
           <div className="print-hide mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <PrintReceiptButton />

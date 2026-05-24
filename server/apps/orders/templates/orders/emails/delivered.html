@@ -1,5 +1,7 @@
 {% extends "orders/emails/_base.html" %}
 
+{% block preheader %}Your {{ site_name }} order {{ order.order_number }} has been delivered.{% endblock %}
+
 {% block headline %}Delivered{% endblock %}
 
 {% block intro %}
@@ -10,5 +12,3 @@
   If anything isn't right, just reply to this email and we'll sort it out.
 </p>
 {% endblock %}
-
-{% block cta %}View Order{% endblock %}

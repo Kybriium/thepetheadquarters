@@ -1,5 +1,7 @@
 {% extends "orders/emails/_base.html" %}
 
+{% block preheader %}Your {{ site_name }} order {{ order.order_number }} has been cancelled.{% endblock %}
+
 {% block headline %}Order cancelled{% endblock %}
 
 {% block intro %}
@@ -15,5 +17,3 @@
   If a payment was taken for this order, the refund will appear on your statement within a few business days.
 </p>
 {% endblock %}
-
-{% block cta %}View Order{% endblock %}

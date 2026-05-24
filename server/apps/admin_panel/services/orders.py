@@ -85,18 +85,28 @@ def _send_status_email(order, status_key: str, extra_context: dict | None = None
     site_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
     order_url = f"{site_url}/checkout/success?session_id={order.stripe_checkout_session_id}"
 
+    tracking_url = order.tracking_link or order.tracking_url or ""
+    # For shipped emails with a known tracking URL, swap the CTA label to
+    # "Track Order" so the gold button matches what clicking it actually
+    # does. The template uses {{ cta_label }} so it appears in both the
+    # HTML anchor and the Outlook VML fallback button.
+    cta_label = "View Order"
+    if status_key == "shipped" and tracking_url:
+        cta_label = "Track Order"
+
     context = {
         "order": order,
         "items": order.items.all(),
         "site_name": site_name,
         "order_url": order_url,
-        "tracking_url": order.tracking_link or order.tracking_url or "",
+        "tracking_url": tracking_url,
         "carrier_label": order.get_tracking_carrier_display() if order.tracking_carrier else "",
         "subtotal_display": _money(order.subtotal),
         "shipping_display": "FREE" if order.shipping_cost == 0 else _money(order.shipping_cost),
         "discount_display": _money(order.discount_amount) if order.discount_amount else "",
         "total_display": _money(order.total),
         "refund_display": _money(order.refund_amount) if order.refund_amount else "",
+        "cta_label": cta_label,
     }
     if extra_context:
         context.update(extra_context)

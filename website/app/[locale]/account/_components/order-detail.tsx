@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { endpoints } from "@/config/endpoints";
 import { PrintReceiptButton, Receipt } from "@/components/orders/receipt";
+import { TrackingCard } from "@/components/orders/tracking-card";
 import type { Order } from "@/types/order";
 
 interface OrderDetailProps {
@@ -88,6 +89,10 @@ export function OrderDetail({ orderNumber }: OrderDetailProps) {
           {order.status}
         </span>
       </div>
+
+      {/* Tracking sits above the receipt — once an order ships, the parcel
+          is the customer's primary concern, the receipt is secondary. */}
+      <TrackingCard order={order} />
 
       <Receipt order={order} />
 

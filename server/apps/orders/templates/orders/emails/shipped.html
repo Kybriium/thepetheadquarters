@@ -1,5 +1,7 @@
 {% extends "orders/emails/_base.html" %}
 
+{% block preheader %}Your {{ site_name }} order {{ order.order_number }} is on the way{% if order.tracking_number %} — tracking {{ order.tracking_number }}{% endif %}.{% endblock %}
+
 {% block headline %}Your order is on the way{% endblock %}
 
 {% block intro %}
@@ -17,5 +19,3 @@
 </div>
 {% endif %}
 {% endblock %}
-
-{% block cta %}{% if tracking_url %}Track Order{% else %}View Order{% endif %}{% endblock %}

@@ -1,74 +1,128 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  {# Tell iOS Mail / Apple Mail / Outlook web that we render correctly in
+     both light and dark modes — stops automatic colour inversion that
+     would make the gold-on-white CTA look muddy. #}
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
+  <title>{{ site_name }}</title>
+  {# Outlook-only conditional CSS: a few mso- rules that fix table spacing
+     and the dpi quirk that scales everything 1.5x on high-DPI Windows. #}
+  <!--[if mso]>
+  <style type="text/css">
+    table, td { border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0; }
+    table { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  </style>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
 </head>
 <body style="margin:0;padding:0;background:#F4F1EA;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:40px auto;background:#FFFFFF;border-radius:4px;border:1px solid #DED9CF;">
+
+  {# Preheader: hidden snippet shown as inbox preview text alongside the
+     subject. Each child overrides this. Padded with zero-width chars so
+     clients don't leak body text into the preview. #}
+  <div style="display:none;font-size:1px;color:#F4F1EA;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family:Arial,sans-serif;">
+    {% block preheader %}Update from {{ site_name }}.{% endblock %}
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F1EA;">
     <tr>
-      <td style="padding:40px 32px 24px;text-align:center;">
-        <h1 style="margin:0 0 8px;font-size:24px;font-weight:400;color:#111111;letter-spacing:0.02em;">{{ site_name }}</h1>
-        <p style="margin:0;font-size:13px;color:#888888;letter-spacing:0.05em;text-transform:uppercase;">{% block headline %}{% endblock %}</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 32px 32px;">
-        {% block intro %}{% endblock %}
-
-        <p style="margin:0 0 24px;font-size:13px;color:#555555;">
-          Order number: <strong style="color:#111111;">{{ order.order_number }}</strong>
-        </p>
-
-        {% block extra %}{% endblock %}
-
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #DED9CF;">
-          {% for item in items %}
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:40px auto;background:#FFFFFF;border-radius:4px;border:1px solid #DED9CF;">
           <tr>
-            <td style="padding:12px 0;border-bottom:1px solid #DED9CF;">
-              <p style="margin:0;font-size:14px;color:#111111;font-weight:500;">{{ item.product_name }}</p>
-              {% if item.variant_option_label %}<p style="margin:2px 0 0;font-size:12px;color:#555555;">{{ item.variant_option_label }}</p>{% endif %}
-            </td>
-            <td style="padding:12px 0;border-bottom:1px solid #DED9CF;text-align:right;white-space:nowrap;">
-              <p style="margin:0;font-size:13px;color:#555555;">x{{ item.quantity }}</p>
+            <td style="padding:40px 32px 24px;text-align:center;">
+              <h1 style="margin:0 0 8px;font-size:24px;font-weight:400;color:#111111;letter-spacing:0.02em;">{{ site_name }}</h1>
+              <p style="margin:0;font-size:13px;color:#888888;letter-spacing:0.05em;text-transform:uppercase;">{% block headline %}{% endblock %}</p>
             </td>
           </tr>
-          {% endfor %}
-        </table>
+          <tr>
+            <td style="padding:0 32px 32px;">
+              {% block intro %}{% endblock %}
 
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
-          <tr>
-            <td style="padding:4px 0;font-size:13px;color:#555555;">Subtotal</td>
-            <td style="padding:4px 0;font-size:13px;color:#111111;text-align:right;">{{ subtotal_display }}</td>
-          </tr>
-          <tr>
-            <td style="padding:4px 0;font-size:13px;color:#555555;">Shipping</td>
-            <td style="padding:4px 0;font-size:13px;color:#111111;text-align:right;">{{ shipping_display }}</td>
-          </tr>
-          {% if discount_display %}
-          <tr>
-            <td style="padding:4px 0;font-size:13px;color:#C6A030;">Discount</td>
-            <td style="padding:4px 0;font-size:13px;color:#C6A030;text-align:right;">−{{ discount_display }}</td>
-          </tr>
-          {% endif %}
-          <tr>
-            <td style="padding:8px 0;font-size:15px;font-weight:600;color:#111111;border-top:1px solid #DED9CF;">Total</td>
-            <td style="padding:8px 0;font-size:15px;font-weight:600;color:#111111;text-align:right;border-top:1px solid #DED9CF;">{{ total_display }}</td>
-          </tr>
-        </table>
+              <p style="margin:0 0 24px;font-size:13px;color:#555555;">
+                Order number: <strong style="color:#111111;">{{ order.order_number }}</strong>
+              </p>
 
-        <table width="100%" cellpadding="0" cellspacing="0">
+              {% block extra %}{% endblock %}
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #DED9CF;">
+                {% for item in items %}
+                <tr>
+                  <td style="padding:12px 0;border-bottom:1px solid #DED9CF;">
+                    <p style="margin:0;font-size:14px;color:#111111;font-weight:500;">{{ item.product_name }}</p>
+                    {% if item.variant_option_label %}<p style="margin:2px 0 0;font-size:12px;color:#555555;">{{ item.variant_option_label }}</p>{% endif %}
+                  </td>
+                  <td style="padding:12px 0;border-bottom:1px solid #DED9CF;text-align:right;white-space:nowrap;">
+                    <p style="margin:0;font-size:13px;color:#555555;">x{{ item.quantity }}</p>
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+                <tr>
+                  <td style="padding:4px 0;font-size:13px;color:#555555;">Subtotal</td>
+                  <td style="padding:4px 0;font-size:13px;color:#111111;text-align:right;">{{ subtotal_display }}</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;font-size:13px;color:#555555;">Shipping</td>
+                  <td style="padding:4px 0;font-size:13px;color:#111111;text-align:right;">{{ shipping_display }}</td>
+                </tr>
+                {% if discount_display %}
+                <tr>
+                  <td style="padding:4px 0;font-size:13px;color:#C6A030;">Discount</td>
+                  <td style="padding:4px 0;font-size:13px;color:#C6A030;text-align:right;">−{{ discount_display }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td style="padding:8px 0;font-size:15px;font-weight:600;color:#111111;border-top:1px solid #DED9CF;">Total</td>
+                  <td style="padding:8px 0;font-size:15px;font-weight:600;color:#111111;text-align:right;border-top:1px solid #DED9CF;">{{ total_display }}</td>
+                </tr>
+              </table>
+
+              {# Bulletproof CTA — Outlook desktop ignores HTML rounded
+                 corners and padding-on-anchor, so we render a VML rectangle
+                 (visible only in Outlook desktop, via the [if mso] guard)
+                 and fall back to a plain HTML anchor everywhere else.
+                 `cta_label` comes from the view's per-status context. #}
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:24px 0 0;text-align:center;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ order_url }}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="8%" stroke="f" fillcolor="#C6A030">
+                      <w:anchorlock/>
+                      <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;">{{ cta_label|default:"View Order" }}</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="{{ order_url }}" style="display:inline-block;padding:14px 32px;background:#C6A030;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border-radius:4px;mso-hide:all;">{{ cta_label|default:"View Order" }}</a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
           <tr>
-            <td style="padding:24px 0 0;text-align:center;">
-              <a href="{{ order_url }}" style="display:inline-block;padding:14px 32px;background:#C6A030;color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border-radius:4px;">{% block cta %}View Order{% endblock %}</a>
+            <td style="padding:24px 32px;border-top:1px solid #DED9CF;text-align:center;">
+              {# Companies Act 2006 s.82 — every business communication from
+                 a Ltd company must show the registered identity. #}
+              <p style="margin:0 0 8px;font-size:11px;color:#999999;line-height:1.5;">
+                {{ site_name }} is a trading name of CHERYA HOLDINGS LIMITED, a company<br/>
+                registered in England and Wales (no. 17203315).<br/>
+                Registered office: 167-169 Great Portland Street, London, W1W 5PF.
+              </p>
+              <p style="margin:0;font-size:12px;color:#999999;">&copy; {{ site_name }}</p>
             </td>
           </tr>
         </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:24px 32px;border-top:1px solid #DED9CF;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#999999;">&copy; {{ site_name }}</p>
       </td>
     </tr>
   </table>

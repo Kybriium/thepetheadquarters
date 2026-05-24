@@ -55,6 +55,11 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    # Tracking — only populated once the order is shipped. tracking_link is
+    # derived from carrier+number for known couriers (Royal Mail, DPD, Evri,
+    # UPS) and falls back to tracking_url for the "Other" carrier.
+    tracking_carrier_display = serializers.SerializerMethodField()
+    tracking_link = serializers.CharField(read_only=True)
 
     class Meta:
         model = Order
@@ -62,12 +67,17 @@ class OrderSerializer(serializers.ModelSerializer):
             "id", "order_number", "status", "email",
             "subtotal", "shipping_cost", "discount_amount", "promotion_code",
             "vat_amount", "vat_rate", "total",
-            "created_at", "paid_at",
+            "created_at", "paid_at", "shipped_at", "delivered_at",
             "shipping_full_name", "shipping_address_line_1",
             "shipping_address_line_2", "shipping_city",
             "shipping_county", "shipping_postcode", "shipping_country",
+            "tracking_carrier", "tracking_carrier_display",
+            "tracking_number", "tracking_link",
             "items",
         ]
+
+    def get_tracking_carrier_display(self, obj) -> str:
+        return obj.get_tracking_carrier_display() if obj.tracking_carrier else ""
 
 
 class OrderListSerializer(serializers.ModelSerializer):

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Download } from "lucide-react";
@@ -40,7 +41,16 @@ export function Footer({ dict, navDict }: FooterProps) {
   // PWA install — show only when the browser can actually install. Hides
   // for users on Firefox desktop, already-installed apps, etc.
   const { canInstall, isIosSafari, isInstalled } = usePwaInstall();
-  const canShowInstallLink = !isInstalled && (canInstall || isIosSafari);
+  // The install state is derived from browser-only APIs (beforeinstallprompt,
+  // navigator.standalone, matchMedia) — none of which exist server-side.
+  // Server renders without the button; client waits until after mount to
+  // reveal it. Skipping this gate causes a React hydration mismatch that
+  // garbles surrounding DOM (the next button — "Back to top" — gets its
+  // children swapped with the Download icon).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const canShowInstallLink =
+    mounted && !isInstalled && (canInstall || isIosSafari);
 
   async function handleInstallClick() {
     if (canInstall) {

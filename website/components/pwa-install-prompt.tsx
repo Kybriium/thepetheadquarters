@@ -28,7 +28,10 @@ import {
  * Mounts at the root of the app from providers.tsx alongside CookieNotice.
  */
 
-const COOKIE_DISMISSED_KEY = "tph-cookie-notice-dismissed";
+// Keep in sync with `lib/clarity.ts` CONSENT_KEY — used here only as a
+// "has the user closed the cookie notice yet?" signal so the install
+// prompt doesn't stack on top of the consent banner.
+const COOKIE_DISMISSED_KEY = "tph-cookie-consent";
 const INSTALL_DISMISSED_KEY = "tph-install-prompt-dismissed";
 const DISMISS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

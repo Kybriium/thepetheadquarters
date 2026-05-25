@@ -13,6 +13,7 @@ import { Footer } from "@/components/layout/footer";
 import { UspRibbon } from "@/components/storefront/usp-ribbon";
 import { LiveActivityToaster } from "@/components/storefront/live-activity-toaster";
 import { FirstOrderBanner } from "@/components/storefront/first-order-banner";
+import { ClarityScript } from "@/components/clarity-script";
 
 import "../globals.css";
 
@@ -166,6 +167,7 @@ export default async function LocaleLayout({
         </Providers>
         <ToastContainer />
         <ScrollAnimations />
+        <ClarityScript />
       </body>
     </html>
   );

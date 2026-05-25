@@ -21,9 +21,31 @@ test("privacy policy includes age and children clauses", async ({ page }) => {
 
 test("privacy policy lists every current subprocessor", async ({ page }) => {
   await page.goto("/legal/privacy");
-  for (const name of ["Stripe", "Resend", "Cloudinary", "Railway", "Cloudflare", "Telegram"]) {
+  for (const name of [
+    "Stripe",
+    "Resend",
+    "Cloudinary",
+    "Railway",
+    "Cloudflare",
+    "Telegram",
+    "Microsoft Clarity",
+  ]) {
     await expect(page.locator("body")).toContainText(name);
   }
+});
+
+test("cookies policy discloses Microsoft Clarity session replay and consent flow", async ({
+  page,
+}) => {
+  await page.goto("/legal/cookies");
+  // The Clarity disclosure clause must be present once we ship the tag
+  await expect(page.locator("body")).toContainText(/Microsoft Clarity/i);
+  await expect(page.locator("body")).toContainText(/session.replay/i);
+  await expect(page.locator("body")).toContainText(/Necessary only/i);
+  // Old wording that became a false claim — must be gone
+  await expect(page.locator("body")).not.toContainText(
+    /we don't use session replay/i,
+  );
 });
 
 test("privacy policy retention period matches HMRC", async ({ page }) => {

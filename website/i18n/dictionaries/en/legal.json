@@ -33,7 +33,7 @@
       },
       {
         "heading": "8. Who we share your data with (subprocessors)",
-        "content": "We share the minimum needed with the following processors. Each is bound by a written agreement (a data processing agreement under UK GDPR Article 28) and may only handle your data on our instructions:\n\n• Stripe (payment processing, US-based) — card details, billing email, order amount.\n• Resend (transactional email, US-based) — your email address and the email content we send you.\n• Cloudinary (image hosting, US-based) — product images and any customisation images you upload.\n• Railway (application + database hosting, EU/US regions) — all of the above stored in our PostgreSQL database.\n• Cloudflare (DNS + email routing, global) — domain resolution and routing of contact@thepetheadquarters.co.uk to our team inbox.\n• Royal Mail, DPD, Evri, UPS or other couriers (as relevant) — your shipping address and contact details for delivery.\n• Our suppliers for dropshipped items — your shipping address and contact details for fulfilment.\n• Telegram (admin notifications only — order summaries to our team; never your full card or email body).\n\nWe never sell your personal data and we do not share it for marketing purposes with any third party."
+        "content": "We share the minimum needed with the following processors. Each is bound by a written agreement (a data processing agreement under UK GDPR Article 28) and may only handle your data on our instructions:\n\n• Stripe (payment processing, US-based) — card details, billing email, order amount.\n• Resend (transactional email, US-based) — your email address and the email content we send you.\n• Cloudinary (image hosting, US-based) — product images, any customisation images you upload, and admin-uploaded receipts.\n• Railway (application + database hosting, EU/US regions) — all of the above stored in our PostgreSQL database.\n• Cloudflare (DNS + email routing, global) — domain resolution and routing of contact@thepetheadquarters.co.uk to our team inbox.\n• Microsoft Clarity (session-replay analytics, US-based, runs only if you accept analytics in the cookie notice) — pseudonymous interaction data (clicks, scrolls, mouse movement). Form text, addresses and any personal text you type are masked in the recording itself before it leaves your browser. No card details, no email body, no full names are sent to Microsoft.\n• Royal Mail, DPD, Evri, UPS or other couriers (as relevant) — your shipping address and contact details for delivery.\n• Our suppliers for dropshipped items — your shipping address and contact details for fulfilment.\n• Telegram (admin notifications only — order summaries to our team; never your full card or email body).\n\nWe never sell your personal data and we do not share it for marketing purposes with any third party."
       },
       {
         "heading": "9. International data transfers",
@@ -61,7 +61,7 @@
       },
       {
         "heading": "15. Cookies and tracking",
-        "content": "We use the minimum tracking necessary. We do not use Google Analytics, Facebook Pixel, or any advertising cookies. See our Cookie Policy for full details on what we store on your device and why."
+        "content": "We use the minimum tracking necessary. With your consent, we use Microsoft Clarity to record pseudonymous session replays — this helps us identify confusing parts of the site and fix them. You can decline this when you first visit, and change your preference at any time by clearing your browser site data or emailing us. We do not use Google Analytics, Facebook Pixel, or any advertising cookies. See our Cookie Policy for full details on what we store on your device and why."
       },
       {
         "heading": "16. Changes to this policy",
@@ -161,7 +161,7 @@
       },
       {
         "heading": "2. The short version",
-        "content": "We use as little tracking as possible. We don't use Google Analytics, Facebook Pixel, advertising cookies, or any third-party trackers. We run our own privacy-friendly anonymous analytics so we can see which pages are popular and how to improve the site — nothing more."
+        "content": "We use as little tracking as possible. We always run essential login + cart cookies and our own privacy-friendly anonymous analytics. With your consent — and only with your consent — we also use Microsoft Clarity to record anonymous session replays so we can see where the site is confusing and fix it. We don't use Google Analytics, Facebook Pixel, advertising cookies, or any other third-party trackers."
       },
       {
         "heading": "3. Strictly necessary cookies",
@@ -176,23 +176,27 @@
         "content": "We track aggregate information about which pages people visit, how long they stay, and which products are popular, so we can improve the site. We do this without setting any cookies and without storing your IP address. Each visitor is identified by a one-way hash that resets every 24 hours, so we can't recognise you across days or devices unless you're logged in. Under PECR (the UK's cookie law) this kind of first-party anonymous analytics does not require your consent, but we show a notice anyway because we think you should know."
       },
       {
-        "heading": "6. Opting out",
-        "content": "If you'd rather we didn't run analytics on your visit, click \"Reject analytics\" in the privacy notice when you arrive. You can also enable Do Not Track in your browser settings — we respect that signal automatically. Opting out doesn't break anything; the site works exactly the same."
+        "heading": "6. Session-replay analytics (with your consent)",
+        "content": "If you click \"Accept all\" in the privacy notice, we load Microsoft Clarity — a session-replay tool that records an anonymised playback of your visit (mouse movement, clicks, scroll behaviour, page transitions). Clarity helps us see where the layout is confusing or where checkout drops off, so we can fix it. We have configured Clarity to its strictest text-masking mode — form fields, addresses, names and any personal text you type are replaced with placeholders in the recording itself, before it leaves your browser. Clarity sets a small number of first-party cookies (_clck, _clsk, MUID) that expire within a year. To turn this off, click \"Necessary only\" in the cookie notice. If you've already accepted and want to revoke, clear your site data in your browser (Settings → Privacy → Site data) or email contact@thepetheadquarters.co.uk and we will treat the request as a UK GDPR Article 7(3) consent withdrawal."
       },
       {
-        "heading": "7. What we don't do",
-        "content": "We don't sell, share, or transfer your data to third parties for advertising. We don't use cookies to track you across other websites. We don't show personalised ads. We don't use session replay, heatmaps, or any tool that records what you click or type. We don't fingerprint your device."
+        "heading": "7. Opting out",
+        "content": "If you'd rather we didn't run any optional analytics on your visit, click \"Necessary only\" in the privacy notice when you arrive — this stops both our first-party analytics and Microsoft Clarity. You can also enable Do Not Track in your browser settings — we respect that signal automatically. Opting out doesn't break anything; the site works exactly the same."
       },
       {
-        "heading": "8. Children's data",
+        "heading": "8. What we don't do",
+        "content": "We don't sell, share, or transfer your data to third parties for advertising. We don't use cookies to track you across other websites. We don't show personalised ads. We don't run Google Analytics, Facebook Pixel, or any advertising tracker. We don't fingerprint your device."
+      },
+      {
+        "heading": "9. Children's data",
         "content": "Our site is intended for adults aged 18 or over (with accounts available from age 13 with parental supervision). We do not knowingly set cookies or collect data from anyone under 13. See section 3 of our Privacy Policy for the full age requirements."
       },
       {
-        "heading": "9. Updates",
+        "heading": "10. Updates",
         "content": "We may update this policy as the site evolves. The \"last updated\" date at the top will reflect any changes."
       },
       {
-        "heading": "10. Contact",
+        "heading": "11. Contact",
         "content": "Questions about how we handle your data? Email contact@thepetheadquarters.co.uk."
       }
     ]

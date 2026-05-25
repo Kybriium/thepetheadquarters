@@ -21,6 +21,23 @@ test("cookie notice appears for new visitor and Clarity tag is absent until acce
   expect(consent).toBe("all");
 });
 
+test("after accepting, Clarity tag injects and loads the remote script", async ({ page }) => {
+  await page.goto("/");
+  const banner = page.getByRole("dialog", { name: /cookies/i });
+  await expect(banner).toBeVisible({ timeout: 5000 });
+  await page.getByRole("button", { name: /accept all/i }).click();
+  await expect(banner).toBeHidden();
+
+  // The next/script inline snippet should now be on the page
+  await expect(page.locator("script#ms-clarity")).toHaveCount(1, { timeout: 5000 });
+
+  // And the snippet should have appended a <script src="clarity.ms/tag/..."> tag.
+  // This proves the project ID flowed through the env var into the page.
+  await expect(page.locator('script[src*="clarity.ms/tag/"]')).toHaveCount(1, {
+    timeout: 5000,
+  });
+});
+
 test("declining keeps Clarity disabled and stores 'necessary'", async ({ page }) => {
   await page.goto("/");
   const banner = page.getByRole("dialog", { name: /cookies/i });

@@ -214,6 +214,8 @@ export const endpoints = {
     team: {
       list: `${API_BASE}/admin/team/`,
       role: (id: string) => `${API_BASE}/admin/team/${id}/role/`,
+      promote: `${API_BASE}/admin/team/promote/`,
+      demote: (id: string) => `${API_BASE}/admin/team/${id}/demote/`,
     },
     roles: {
       list: `${API_BASE}/admin/roles/`,

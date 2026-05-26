@@ -14,6 +14,7 @@ from apps.core.responses import (
 from apps.accounts.mfa import (
     ChallengeTokenError,
     check_backup_code,
+    consume_code,
     generate_backup_codes,
     generate_secret,
     hash_backup_code,
@@ -191,7 +192,7 @@ class MfaLoginView(APIView):
 
         code = serializer.validated_data["code"].strip()
 
-        if not _consume_mfa_code(mfa, code):
+        if not consume_code(mfa, code):
             return error_response("auth.mfa_invalid_code", status_code=401)
 
         from apps.orders.services import link_guest_orders_to_user
@@ -200,34 +201,6 @@ class MfaLoginView(APIView):
         response = success_response(data=ProfileSerializer(user).data)
         set_auth_cookies(response, user)
         return response
-
-
-def _consume_mfa_code(mfa, code):
-    """
-    Try the submitted code as a TOTP first, then as a backup code.
-    Persists state on success: TOTP bumps last_used_counter (replay
-    defence), backup code is marked used_at.
-    Returns True on success, False on failure.
-    """
-    if len(code) == 6 and code.isdigit():
-        step = verify_totp(mfa.secret, code, last_used_counter=mfa.last_used_counter)
-        if step is not None:
-            mfa.last_used_counter = step
-            mfa.save(update_fields=["last_used_counter", "updated_at"])
-            return True
-        # 6-digit code that didn't match TOTP — don't fall through to
-        # backup codes (those are longer). Caller will report failure.
-        return False
-
-    # Backup code path. Walk unused codes, check_password is constant
-    # time so iteration timing doesn't leak which one matched.
-    normalised = code.upper().strip()
-    for entry in mfa.backup_codes.filter(used_at__isnull=True):
-        if check_backup_code(normalised, entry.code_hash):
-            entry.used_at = timezone.now()
-            entry.save(update_fields=["used_at", "updated_at"])
-            return True
-    return False
 
 
 class MfaSetupView(APIView):
@@ -344,7 +317,7 @@ class MfaDisableView(APIView):
         if not mfa.is_enabled:
             return error_response("auth.mfa_not_enrolled", status_code=400)
 
-        if not _consume_mfa_code(mfa, serializer.validated_data["code"]):
+        if not consume_code(mfa, serializer.validated_data["code"]):
             return error_response("auth.mfa_invalid_code", status_code=401)
 
         # Tear down completely. Re-enrolling = new secret + new backup
@@ -379,7 +352,7 @@ class MfaRegenerateBackupCodesView(APIView):
         if not mfa.is_enabled:
             return error_response("auth.mfa_not_enrolled", status_code=400)
 
-        if not _consume_mfa_code(mfa, serializer.validated_data["code"]):
+        if not consume_code(mfa, serializer.validated_data["code"]):
             return error_response("auth.mfa_invalid_code", status_code=401)
 
         mfa.backup_codes.all().delete()

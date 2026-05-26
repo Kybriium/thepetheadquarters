@@ -23,6 +23,12 @@ venv/
 env/
 .Python
 
+# Type checker / linter caches — local-only, can be 10s of MB
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.tox/
+
 # Django
 *.log
 local_settings.py

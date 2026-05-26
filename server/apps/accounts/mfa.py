@@ -124,6 +124,69 @@ def check_backup_code(plaintext: str, hashed: str) -> bool:
     return check_password(plaintext.upper().strip(), hashed)
 
 
+def consume_code(mfa, code: str) -> bool:
+    """
+    Verify a TOTP or backup code against a user's MFA enrollment, and
+    persist the consumption so the same code can't be reused.
+
+      - 6-digit numeric → tries TOTP. On success, advances
+        last_used_counter (replay defence).
+      - Anything else → walks unused backup codes; on a match, stamps
+        used_at on the matched code.
+
+    Used by both /auth/2fa/login/ (step 2 of the regular login flow)
+    and the step-up flows for sensitive admin actions (promote a
+    customer to admin, change someone's role, etc). Reusing the same
+    helper keeps the consume semantics identical everywhere.
+
+    Returns True on success, False on any failure (including missing
+    enrollment, disabled MFA, or no matching code).
+    """
+    from django.utils import timezone
+
+    if mfa is None or not mfa.is_enabled:
+        return False
+
+    code = (code or "").strip()
+    if not code:
+        return False
+
+    if len(code) == 6 and code.isdigit():
+        step = verify_totp(mfa.secret, code, last_used_counter=mfa.last_used_counter)
+        if step is not None:
+            mfa.last_used_counter = step
+            mfa.save(update_fields=["last_used_counter", "updated_at"])
+            return True
+        # 6-digit code that didn't match TOTP — don't fall through to
+        # backup codes (those are longer). Caller reports failure.
+        return False
+
+    normalised = code.upper()
+    for entry in mfa.backup_codes.filter(used_at__isnull=True):
+        if check_backup_code(normalised, entry.code_hash):
+            entry.used_at = timezone.now()
+            entry.save(update_fields=["used_at", "updated_at"])
+            return True
+    return False
+
+
+def verify_step_up(user, code: str) -> bool:
+    """
+    Step-up auth helper for sensitive admin actions.
+
+    The acting user must already have MFA enrolled — staff accounts
+    without 2FA can't perform step-up-gated actions at all, because
+    they can't be reached past IsStaffWithMfa to begin with. We re-
+    check that here defensively in case the helper is ever wired into
+    a non-admin flow.
+    """
+    try:
+        mfa = user.mfa
+    except Exception:
+        return False
+    return consume_code(mfa, code)
+
+
 def sign_challenge_token(user_id) -> str:
     """
     Issue a short-lived signed envelope after step-1 (password) auth.

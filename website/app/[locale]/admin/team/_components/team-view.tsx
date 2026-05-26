@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, UserMinus, UserPlus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useAdminPermission } from "@/hooks/use-admin-permission";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { endpoints } from "@/config/endpoints";
 import type { Role } from "@/types/rbac";
+import { MfaStepUpModal } from "../../_components/mfa-step-up-modal";
+import { PromoteCustomerModal } from "./promote-customer-modal";
 
 interface TeamMember {
   id: string;
@@ -31,6 +33,19 @@ export function TeamView() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   const [confirmDemote, setConfirmDemote] = useState<{ member: TeamMember; newRole: string } | null>(null);
+  // Step-up MFA prompt for role changes. `pendingRoleChange` holds the
+  // intent (which member + new role) until the operator either
+  // confirms with a code or cancels.
+  const [pendingRoleChange, setPendingRoleChange] = useState<{ member: TeamMember; newRole: string } | null>(null);
+  const [stepUpError, setStepUpError] = useState<string | null>(null);
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  // Two-step demote: confirm modal first ("turn them back to a
+  // customer"), then step-up 2FA. `confirmRemove` holds the staff
+  // member while we wait for them to confirm; `pendingRemove` holds
+  // them while we wait for the 2FA code.
+  const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<TeamMember | null>(null);
+  const [removeStepUpError, setRemoveStepUpError] = useState<string | null>(null);
 
   // Lookup table: role code → human label & description. Built from
   // the live /admin/roles/ list so custom roles show up automatically.
@@ -61,22 +76,38 @@ export function TeamView() {
     void fetchData();
   }, [fetchData]);
 
-  async function changeRole(member: TeamMember, role: string) {
+  async function changeRole(member: TeamMember, role: string, mfaCode: string) {
     setUpdatingId(member.id);
     setRowError(null);
+    setStepUpError(null);
     try {
       const res = await apiClient.patch<{ status: string; data: TeamMember; code?: string }>(
         endpoints.admin.team.role(member.id),
-        { role },
+        { role, mfa_code: mfaCode },
       );
       if (res.status === "success") {
         setMembers((prev) =>
           prev ? prev.map((m) => (m.id === member.id ? res.data : m)) : prev,
         );
+        // Success — close both the demote confirm and step-up modals.
+        setConfirmDemote(null);
+        setPendingRoleChange(null);
       }
     } catch (err) {
       const apiErr = err as ApiError;
       const code = apiErr.message;
+      // Wrong code: keep the step-up modal open so the operator can
+      // retry without restarting the whole flow.
+      if (code === "auth.mfa_invalid_code") {
+        setStepUpError("That code didn't work. Try again with the current 6-digit code.");
+        return;
+      }
+      if (code === "auth.mfa_required_for_action") {
+        setStepUpError("A 2FA code is required.");
+        return;
+      }
+      // Everything else is a hard fail — surface inline on the row and
+      // close the modals so the operator isn't stuck.
       let message = "Couldn't change role";
       if (code === "admin.team.cant_demote_self") {
         message = "You can't change your own role.";
@@ -88,19 +119,60 @@ export function TeamView() {
         message = "You don't have permission to change roles.";
       }
       setRowError({ id: member.id, message });
+      setConfirmDemote(null);
+      setPendingRoleChange(null);
     } finally {
       setUpdatingId(null);
-      setConfirmDemote(null);
     }
   }
 
   function handleRoleChange(member: TeamMember, newRole: string) {
-    // Demoting an Owner is destructive — surface a confirmation.
+    // No-op if the role didn't actually change — saves the user from
+    // typing their 2FA code for nothing.
+    if (member.role === newRole) return;
+    // Demoting an Owner is destructive — surface a confirmation first,
+    // then chain into the step-up modal once they confirm.
     if (member.role === "OWNER" && newRole !== "OWNER") {
       setConfirmDemote({ member, newRole });
       return;
     }
-    void changeRole(member, newRole);
+    setPendingRoleChange({ member, newRole });
+  }
+
+  async function removeFromAdmins(member: TeamMember, mfaCode: string) {
+    setUpdatingId(member.id);
+    setRemoveStepUpError(null);
+    setRowError(null);
+    try {
+      await apiClient.post(endpoints.admin.team.demote(member.id), { mfa_code: mfaCode });
+      // Demoted user falls out of the staff list — remove locally
+      // rather than re-fetching the whole list.
+      setMembers((prev) => (prev ? prev.filter((m) => m.id !== member.id) : prev));
+      setPendingRemove(null);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      const code = apiErr.message;
+      if (code === "auth.mfa_invalid_code") {
+        setRemoveStepUpError("That code didn't work. Try again with the current 6-digit code.");
+        return;
+      }
+      if (code === "auth.mfa_required_for_action") {
+        setRemoveStepUpError("A 2FA code is required.");
+        return;
+      }
+      let message = "Couldn't remove from admins";
+      if (code === "admin.team.cant_demote_self") {
+        message = "You can't remove yourself from admins.";
+      } else if (code === "admin.team.last_owner") {
+        message = "Can't remove the last Owner. Promote someone else to Owner first.";
+      } else if (code === "auth.permission_denied") {
+        message = "You don't have permission to remove admins.";
+      }
+      setRowError({ id: member.id, message });
+      setPendingRemove(null);
+    } finally {
+      setUpdatingId(null);
+    }
   }
 
   const sortedMembers = useMemo(() => {
@@ -141,6 +213,26 @@ export function TeamView() {
 
   return (
     <div className="flex flex-col gap-6">
+      {canManage && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setPromoteOpen(true)}
+            className="btn-gold flex items-center gap-2 rounded-md px-4 py-2.5"
+            style={{
+              fontFamily: "var(--font-montserrat)",
+              fontSize: "var(--text-xs)",
+              fontWeight: "var(--weight-semibold)",
+              textTransform: "uppercase",
+              letterSpacing: "var(--tracking-wide)",
+            }}
+          >
+            <UserPlus size={14} />
+            Promote customer
+          </button>
+        </div>
+      )}
+
       {!canManage && (
         <p
           style={{
@@ -168,6 +260,7 @@ export function TeamView() {
               <Th>Role</Th>
               <Th>2FA</Th>
               <Th>Status</Th>
+              {canManage && <Th>&nbsp;</Th>}
             </tr>
           </thead>
           <tbody>
@@ -284,6 +377,32 @@ export function TeamView() {
                       {m.is_active ? "Active" : "Disabled"}
                     </span>
                   </Td>
+                  {canManage && (
+                    <Td>
+                      {!isSelf && (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmRemove(m)}
+                          disabled={isRowUpdating}
+                          aria-label={`Remove ${m.email} from admins`}
+                          title="Remove from admins (turn back into a customer)"
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition-colors disabled:opacity-50 hover:bg-[rgba(198,40,40,0.08)]"
+                          style={{
+                            border: "1px solid rgba(198,40,40,0.3)",
+                            color: "var(--error)",
+                            fontFamily: "var(--font-montserrat)",
+                            fontSize: 11,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            background: "transparent",
+                          }}
+                        >
+                          <UserMinus size={12} />
+                          Remove
+                        </button>
+                      )}
+                    </Td>
+                  )}
                 </tr>
               );
             })}
@@ -368,7 +487,17 @@ export function TeamView() {
                 Cancel
               </button>
               <button
-                onClick={() => changeRole(confirmDemote.member, confirmDemote.newRole)}
+                onClick={() => {
+                  // Chain into step-up: keep `pendingRoleChange` in
+                  // sync with what the operator just confirmed, then
+                  // close the demote confirmation. The MfaStepUpModal
+                  // (mounted below) appears next.
+                  setPendingRoleChange({
+                    member: confirmDemote.member,
+                    newRole: confirmDemote.newRole,
+                  });
+                  setConfirmDemote(null);
+                }}
                 disabled={updatingId === confirmDemote.member.id}
                 className="flex-1 rounded-md py-2.5 disabled:opacity-50"
                 style={{
@@ -381,12 +510,153 @@ export function TeamView() {
                   letterSpacing: "var(--tracking-wide)",
                 }}
               >
-                Yes, demote
+                Continue
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <MfaStepUpModal
+        open={pendingRoleChange !== null}
+        title="Confirm role change"
+        body={
+          pendingRoleChange ? (
+            <>
+              Change <strong>{pendingRoleChange.member.email}</strong>'s role to{" "}
+              <strong>{roleMeta[pendingRoleChange.newRole]?.name ?? pendingRoleChange.newRole}</strong>?
+              Enter your 2FA code to confirm.
+            </>
+          ) : null
+        }
+        error={stepUpError}
+        pending={updatingId !== null}
+        confirmLabel="Change role"
+        onConfirm={(code) => {
+          if (pendingRoleChange) {
+            void changeRole(pendingRoleChange.member, pendingRoleChange.newRole, code);
+          }
+        }}
+        onCancel={() => {
+          setPendingRoleChange(null);
+          setStepUpError(null);
+        }}
+      />
+
+      {roles && (
+        <PromoteCustomerModal
+          open={promoteOpen}
+          roles={roles}
+          onCancel={() => setPromoteOpen(false)}
+          onSuccess={() => {
+            setPromoteOpen(false);
+            void fetchData();
+          }}
+        />
+      )}
+
+      {/* "Remove from admins" two-step flow: confirmation → step-up MFA. */}
+      {confirmRemove && (
+        <div
+          role="dialog"
+          aria-label="Confirm remove from admins"
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.6)" }}
+          onClick={() => setConfirmRemove(null)}
+        >
+          <div
+            className="max-w-md rounded-lg"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--bg-border)",
+              padding: "var(--space-6)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3" style={{ marginBottom: "var(--space-4)" }}>
+              <UserMinus size={22} style={{ color: "var(--error)", flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <h3 style={{ fontFamily: "var(--font-cormorant)", fontSize: "var(--text-xl)", color: "var(--white)" }}>
+                  Remove from admins?
+                </h3>
+                <p
+                  style={{
+                    fontFamily: "var(--font-montserrat)",
+                    fontSize: "var(--text-sm)",
+                    color: "var(--white-dim)",
+                    marginTop: "var(--space-2)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <strong>{confirmRemove.email}</strong> will turn back into a regular customer.
+                  Their account, order history, and addresses all stay intact — they just
+                  won't be able to reach the admin panel anymore. You can promote them again
+                  later if needed.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmRemove(null)}
+                className="flex-1 rounded-md py-2.5"
+                style={{
+                  border: "1px solid var(--bg-border)",
+                  color: "var(--white-dim)",
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: "var(--text-xs)",
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--tracking-wide)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setPendingRemove(confirmRemove);
+                  setConfirmRemove(null);
+                }}
+                className="flex-1 rounded-md py-2.5"
+                style={{
+                  background: "var(--error)",
+                  color: "var(--white)",
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: "var(--weight-semibold)",
+                  textTransform: "uppercase",
+                  letterSpacing: "var(--tracking-wide)",
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <MfaStepUpModal
+        open={pendingRemove !== null}
+        title="Confirm removal"
+        body={
+          pendingRemove ? (
+            <>
+              Remove <strong>{pendingRemove.email}</strong> from admins? Enter your 2FA code to
+              confirm.
+            </>
+          ) : null
+        }
+        error={removeStepUpError}
+        pending={updatingId !== null}
+        confirmLabel="Remove admin"
+        onConfirm={(code) => {
+          if (pendingRemove) {
+            void removeFromAdmins(pendingRemove, code);
+          }
+        }}
+        onCancel={() => {
+          setPendingRemove(null);
+          setRemoveStepUpError(null);
+        }}
+      />
     </div>
   );
 }

@@ -48,6 +48,17 @@ THROTTLE_OVERRIDE = override_settings(
 )
 
 
+def _live_code(user) -> str:
+    """Compute the current TOTP code for a staff user's MFA enrollment.
+
+    Used by step-up tests to satisfy the mfa_code field on sensitive
+    admin actions (role change, promote). Refreshing from DB picks up
+    any counter advance from a prior call in the same test.
+    """
+    user.mfa.refresh_from_db()
+    return pyotp.TOTP(user.mfa.secret).now()
+
+
 def _make_staff(email: str, role: str) -> User:
     """Create a staff user with the given role and MFA already enrolled."""
     user = User.objects.create_user(
@@ -221,11 +232,12 @@ class TeamManagementTests(TestCase):
         self.assertIn("auditor@test.local", emails)
 
     def test_only_owner_can_change_roles(self):
-        # Auditor cannot manage roles
+        # Auditor cannot manage roles — team.manage gate trips before
+        # the step-up check even gets a chance.
         self.client.force_authenticate(user=self.auditor)
         res = self.client.patch(
             f"/api/v1/admin/team/{self.other_owner.id}/role/",
-            {"role": ROLE_AUDITOR},
+            {"role": ROLE_AUDITOR, "mfa_code": _live_code(self.auditor)},
             format="json",
         )
         self.assertEqual(res.status_code, 403)
@@ -234,7 +246,7 @@ class TeamManagementTests(TestCase):
         self.client.force_authenticate(user=self.owner)
         res = self.client.patch(
             f"/api/v1/admin/team/{self.other_owner.id}/role/",
-            {"role": ROLE_AUDITOR},
+            {"role": ROLE_AUDITOR, "mfa_code": _live_code(self.owner)},
             format="json",
         )
         self.assertEqual(res.status_code, 200)
@@ -245,7 +257,7 @@ class TeamManagementTests(TestCase):
         self.client.force_authenticate(user=self.owner)
         res = self.client.patch(
             f"/api/v1/admin/team/{self.owner.id}/role/",
-            {"role": ROLE_AUDITOR},
+            {"role": ROLE_AUDITOR, "mfa_code": _live_code(self.owner)},
             format="json",
         )
         self.assertEqual(res.status_code, 400)
@@ -258,21 +270,19 @@ class TeamManagementTests(TestCase):
         self.client.force_authenticate(user=self.owner)
         res = self.client.patch(
             f"/api/v1/admin/team/{self.owner.id}/role/",
-            {"role": ROLE_AUDITOR},
+            {"role": ROLE_AUDITOR, "mfa_code": _live_code(self.owner)},
             format="json",
         )
-        # cant_demote_self trips first (it's the same user). To test
-        # last_owner specifically, demote a non-self owner.
-        # Re-create scenario with two owners then have one demote the
-        # other after the cant_demote_self trips — covered by
-        # test_owner_can_demote_other_owner above.
+        # cant_demote_self trips first (it's the same user). The pure
+        # last_owner path is covered implicitly — if you can't demote
+        # yourself and you're the only owner, no one can demote anyone.
         self.assertEqual(res.status_code, 400)
 
     def test_invalid_role_rejected(self):
         self.client.force_authenticate(user=self.owner)
         res = self.client.patch(
             f"/api/v1/admin/team/{self.other_owner.id}/role/",
-            {"role": "GOD_MODE"},
+            {"role": "GOD_MODE", "mfa_code": _live_code(self.owner)},
             format="json",
         )
         self.assertEqual(res.status_code, 422)
@@ -288,11 +298,184 @@ class TeamManagementTests(TestCase):
         self.client.force_authenticate(user=self.owner)
         res = self.client.patch(
             f"/api/v1/admin/team/{customer.id}/role/",
-            {"role": ROLE_OWNER},
+            {"role": ROLE_OWNER, "mfa_code": _live_code(self.owner)},
             format="json",
         )
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.json().get("code"), "admin.team.not_staff")
+
+    def test_role_change_without_mfa_code_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.patch(
+            f"/api/v1/admin/team/{self.other_owner.id}/role/",
+            {"role": ROLE_AUDITOR},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "auth.mfa_required_for_action")
+        # And the role hasn't changed.
+        self.other_owner.refresh_from_db()
+        self.assertEqual(self.other_owner.role, ROLE_OWNER)
+
+    def test_role_change_with_wrong_mfa_code_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.patch(
+            f"/api/v1/admin/team/{self.other_owner.id}/role/",
+            {"role": ROLE_AUDITOR, "mfa_code": "000000"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "auth.mfa_invalid_code")
+
+
+@THROTTLE_OVERRIDE
+class TeamPromoteTests(TestCase):
+    """Promote an existing customer to admin — gated by step-up 2FA."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = _make_staff("owner@test.local", ROLE_OWNER)
+        cls.auditor = _make_staff("auditor@test.local", ROLE_AUDITOR)
+        cls.customer = User.objects.create_user(
+            email="customer@test.local",
+            password="Pass1!",
+            first_name="Cee",
+            last_name="Customer",
+            is_email_verified=True,
+        )
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_owner_can_promote_customer(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {
+                "user_id": str(self.customer.id),
+                "role": ROLE_AUDITOR,
+                "mfa_code": _live_code(self.owner),
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.customer.refresh_from_db()
+        self.assertTrue(self.customer.is_staff)
+        self.assertEqual(self.customer.role, ROLE_AUDITOR)
+
+    def test_promote_without_mfa_code_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {"user_id": str(self.customer.id), "role": ROLE_AUDITOR},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "auth.mfa_required_for_action")
+        self.customer.refresh_from_db()
+        self.assertFalse(self.customer.is_staff)
+
+    def test_promote_with_wrong_mfa_code_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {
+                "user_id": str(self.customer.id),
+                "role": ROLE_AUDITOR,
+                "mfa_code": "000000",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "auth.mfa_invalid_code")
+        self.customer.refresh_from_db()
+        self.assertFalse(self.customer.is_staff)
+
+    def test_promote_with_backup_code_works_and_consumes_it(self):
+        from apps.accounts.mfa import (
+            generate_backup_codes,
+            hash_backup_code,
+        )
+        from apps.accounts.models import MfaBackupCode
+
+        # Mint a backup code on the owner so we can use it for step-up.
+        backup_plain = generate_backup_codes()[0]
+        MfaBackupCode.objects.create(
+            mfa=self.owner.mfa,
+            code_hash=hash_backup_code(backup_plain),
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {
+                "user_id": str(self.customer.id),
+                "role": ROLE_AUDITOR,
+                "mfa_code": backup_plain,
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        # The backup code is now used and can't be reused.
+        self.assertTrue(
+            MfaBackupCode.objects.filter(
+                mfa=self.owner.mfa, used_at__isnull=False,
+            ).exists()
+        )
+
+    def test_promote_already_staff_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {
+                "user_id": str(self.auditor.id),
+                "role": ROLE_AUDITOR,
+                "mfa_code": _live_code(self.owner),
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "admin.team.already_staff")
+
+    def test_promote_invalid_role_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {
+                "user_id": str(self.customer.id),
+                "role": "NONEXISTENT_ROLE",
+                "mfa_code": _live_code(self.owner),
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 422)
+
+    def test_promote_unknown_user_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {
+                "user_id": "00000000-0000-0000-0000-000000000000",
+                "role": ROLE_AUDITOR,
+                "mfa_code": _live_code(self.owner),
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 404)
+
+    def test_auditor_cannot_promote(self):
+        # Auditor lacks team.manage — gate trips before step-up runs.
+        self.client.force_authenticate(user=self.auditor)
+        res = self.client.post(
+            "/api/v1/admin/team/promote/",
+            {
+                "user_id": str(self.customer.id),
+                "role": ROLE_AUDITOR,
+                "mfa_code": _live_code(self.auditor),
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 403)
 
 
 @THROTTLE_OVERRIDE
@@ -526,3 +709,110 @@ class OwnerLivePermissionTests(TestCase):
         owner_role.save(update_fields=["permissions"])
         # Lookup ignores the truncated row and returns the full catalogue.
         self.assertEqual(permissions_for_role(ROLE_OWNER), PERMISSIONS)
+
+
+@THROTTLE_OVERRIDE
+class TeamDemoteTests(TestCase):
+    """Demote an existing admin back to a customer account."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = _make_staff("owner@test.local", ROLE_OWNER)
+        cls.other_owner = _make_staff("owner2@test.local", ROLE_OWNER)
+        cls.staff = _make_staff("staff@test.local", ROLE_INVENTORY_MANAGER)
+        cls.auditor = _make_staff("auditor@test.local", ROLE_AUDITOR)
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_owner_can_demote_staff_to_customer(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            f"/api/v1/admin/team/{self.staff.id}/demote/",
+            {"mfa_code": _live_code(self.owner)},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.staff.refresh_from_db()
+        self.assertFalse(self.staff.is_staff)
+        # Role reset to AUDITOR — safe default if they're ever re-promoted.
+        self.assertEqual(self.staff.role, ROLE_AUDITOR)
+
+    def test_demote_preserves_user_account(self):
+        # Demoting doesn't delete the user. Their orders, email,
+        # addresses, and even MFA enrolment all survive.
+        self.client.force_authenticate(user=self.owner)
+        self.client.post(
+            f"/api/v1/admin/team/{self.staff.id}/demote/",
+            {"mfa_code": _live_code(self.owner)},
+            format="json",
+        )
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.is_active)
+        self.assertEqual(self.staff.email, "staff@test.local")
+        # MFA record still exists — they can log in as a customer.
+        self.assertTrue(hasattr(self.staff, "mfa"))
+
+    def test_cannot_demote_self(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            f"/api/v1/admin/team/{self.owner.id}/demote/",
+            {"mfa_code": _live_code(self.owner)},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "admin.team.cant_demote_self")
+        self.owner.refresh_from_db()
+        self.assertTrue(self.owner.is_staff)
+
+    def test_demote_without_mfa_code_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            f"/api/v1/admin/team/{self.staff.id}/demote/",
+            {},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "auth.mfa_required_for_action")
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.is_staff)
+
+    def test_demote_with_wrong_mfa_code_rejected(self):
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            f"/api/v1/admin/team/{self.staff.id}/demote/",
+            {"mfa_code": "000000"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "auth.mfa_invalid_code")
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.is_staff)
+
+    def test_demote_non_staff_target_rejected(self):
+        customer = User.objects.create_user(
+            email="cust-demote@test.local",
+            password="Pass1!",
+            first_name="X",
+            last_name="Y",
+            is_email_verified=True,
+        )
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            f"/api/v1/admin/team/{customer.id}/demote/",
+            {"mfa_code": _live_code(self.owner)},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json().get("code"), "admin.team.not_staff")
+
+    def test_auditor_cannot_demote(self):
+        self.client.force_authenticate(user=self.auditor)
+        res = self.client.post(
+            f"/api/v1/admin/team/{self.staff.id}/demote/",
+            {"mfa_code": _live_code(self.auditor)},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 403)
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.is_staff)

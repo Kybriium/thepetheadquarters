@@ -1,6 +1,13 @@
 from django.urls import path
 
 from apps.admin_panel.views.dashboard import DashboardView
+from apps.admin_panel.views.roles import (
+    AdminRoleCatalogueView,
+    AdminRoleCloneView,
+    AdminRoleDetailView,
+    AdminRoleListView,
+)
+from apps.admin_panel.views.team import AdminTeamListView, AdminTeamRoleView
 from apps.admin_panel.views.orders import (
     AdminDropshipPendingView,
     AdminOrderCancelView,
@@ -238,4 +245,16 @@ urlpatterns = [
     path("expenses/<uuid:expense_id>/", AdminExpenseDetailView.as_view()),
     path("expenses/<uuid:expense_id>/receipt/", AdminExpenseReceiptView.as_view()),
     path("expenses/<uuid:expense_id>/receipt/file/", AdminExpenseReceiptFileView.as_view()),
+
+    # Team / RBAC management — list staff and change roles. Both
+    # gated by team.* permissions; Owner is the only role that holds
+    # team.manage out of the box.
+    path("team/", AdminTeamListView.as_view()),
+    path("team/<uuid:user_id>/role/", AdminTeamRoleView.as_view()),
+
+    # Role CRUD + permission catalogue for custom roles.
+    path("roles/catalogue/", AdminRoleCatalogueView.as_view()),
+    path("roles/", AdminRoleListView.as_view()),
+    path("roles/<str:code>/", AdminRoleDetailView.as_view()),
+    path("roles/<str:code>/clone/", AdminRoleCloneView.as_view()),
 ]

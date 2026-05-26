@@ -25,6 +25,7 @@ import {
   Menu,
   X,
   Receipt,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import type enAdmin from "@/i18n/dictionaries/en/admin.json";
@@ -33,26 +34,31 @@ interface AdminSidebarProps {
   dict: typeof enAdmin;
 }
 
+// Each nav item declares the permission codes that should make it
+// visible. The user sees an item if they hold at least one of the
+// listed codes. Dashboard has no perm gate — every admin gets it.
 const navItems = [
-  { key: "dashboard" as const, href: "/admin", icon: LayoutDashboard, exact: true },
-  { key: "orders" as const, href: "/admin/orders", icon: Package },
-  { key: "products" as const, href: "/admin/products", icon: Boxes },
-  { key: "inventory" as const, href: "/admin/inventory", icon: Warehouse },
-  { key: "customers" as const, href: "/admin/customers", icon: Users },
-  { key: "suppliers" as const, href: "/admin/suppliers", icon: Truck },
-  { key: "purchaseOrders" as const, href: "/admin/purchase-orders", icon: ClipboardList },
-  { key: "brands" as const, href: "/admin/brands", icon: Tag },
-  { key: "categories" as const, href: "/admin/categories", icon: FolderTree },
-  { key: "promotions" as const, href: "/admin/promotions", icon: Sparkles },
-  { key: "customizations" as const, href: "/admin/customizations", icon: Wand2 },
-  { key: "optionTypes" as const, href: "/admin/option-types", icon: Tag },
-  { key: "integrations" as const, href: "/admin/integrations", icon: Plug },
-  { key: "reviews" as const, href: "/admin/reviews", icon: Star },
-  { key: "contactMessages" as const, href: "/admin/contact-messages", icon: Mail },
-  { key: "analytics" as const, href: "/admin/analytics", icon: Activity },
-  { key: "finances" as const, href: "/admin/finances", icon: Receipt },
-  { key: "reports" as const, href: "/admin/reports", icon: BarChart3 },
-  { key: "audit" as const, href: "/admin/audit", icon: Shield },
+  { key: "dashboard" as const, href: "/admin", icon: LayoutDashboard, exact: true, perms: [] },
+  { key: "orders" as const, href: "/admin/orders", icon: Package, perms: ["orders.view"] },
+  { key: "products" as const, href: "/admin/products", icon: Boxes, perms: ["products.view"] },
+  { key: "inventory" as const, href: "/admin/inventory", icon: Warehouse, perms: ["inventory.view"] },
+  { key: "customers" as const, href: "/admin/customers", icon: Users, perms: ["customers.view"] },
+  { key: "suppliers" as const, href: "/admin/suppliers", icon: Truck, perms: ["suppliers.view"] },
+  { key: "purchaseOrders" as const, href: "/admin/purchase-orders", icon: ClipboardList, perms: ["purchase_orders.view"] },
+  { key: "brands" as const, href: "/admin/brands", icon: Tag, perms: ["catalog.view"] },
+  { key: "categories" as const, href: "/admin/categories", icon: FolderTree, perms: ["catalog.view"] },
+  { key: "promotions" as const, href: "/admin/promotions", icon: Sparkles, perms: ["promotions.view"] },
+  { key: "customizations" as const, href: "/admin/customizations", icon: Wand2, perms: ["products.view"] },
+  { key: "optionTypes" as const, href: "/admin/option-types", icon: Tag, perms: ["products.view"] },
+  { key: "integrations" as const, href: "/admin/integrations", icon: Plug, perms: ["integrations.view"] },
+  { key: "reviews" as const, href: "/admin/reviews", icon: Star, perms: ["reviews.view"] },
+  { key: "contactMessages" as const, href: "/admin/contact-messages", icon: Mail, perms: ["contact.view"] },
+  { key: "analytics" as const, href: "/admin/analytics", icon: Activity, perms: ["analytics.view"] },
+  { key: "finances" as const, href: "/admin/finances", icon: Receipt, perms: ["finances.view", "expenses.view"] },
+  { key: "reports" as const, href: "/admin/reports", icon: BarChart3, perms: ["reports.view"] },
+  { key: "audit" as const, href: "/admin/audit", icon: Shield, perms: ["audit.view"] },
+  { key: "team" as const, href: "/admin/team", icon: UserCog, perms: ["team.view"] },
+  { key: "roles" as const, href: "/admin/roles", icon: Shield, perms: ["team.view"] },
 ];
 
 export function AdminSidebar({ dict }: AdminSidebarProps) {
@@ -92,26 +98,33 @@ export function AdminSidebar({ dict }: AdminSidebarProps) {
       )}
 
       <div className="flex flex-1 flex-col gap-1">
-        {navItems.map((item) => {
-          const active = isActive(item);
-          return (
-            <Link
-              key={item.key}
-              href={item.href}
-              className="flex items-center gap-3 rounded-md px-4 py-2.5 transition-all duration-200"
-              style={{
-                background: active ? "rgba(187,148,41,0.1)" : "transparent",
-                color: active ? "var(--gold-dark)" : "var(--white-dim)",
-                fontFamily: "var(--font-montserrat)",
-                fontSize: "var(--text-sm)",
-                fontWeight: active ? "var(--weight-medium)" : "var(--weight-regular)",
-              }}
-            >
-              <item.icon size={16} />
-              {dict.sidebar[item.key]}
-            </Link>
-          );
-        })}
+        {navItems
+          .filter((item) => {
+            // No permissions declared → show to every admin (dashboard).
+            if (item.perms.length === 0) return true;
+            const userPerms = user?.permissions ?? [];
+            return item.perms.some((p) => userPerms.includes(p));
+          })
+          .map((item) => {
+            const active = isActive(item);
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                className="flex items-center gap-3 rounded-md px-4 py-2.5 transition-all duration-200"
+                style={{
+                  background: active ? "rgba(187,148,41,0.1)" : "transparent",
+                  color: active ? "var(--gold-dark)" : "var(--white-dim)",
+                  fontFamily: "var(--font-montserrat)",
+                  fontSize: "var(--text-sm)",
+                  fontWeight: active ? "var(--weight-medium)" : "var(--weight-regular)",
+                }}
+              >
+                <item.icon size={16} />
+                {dict.sidebar[item.key]}
+              </Link>
+            );
+          })}
       </div>
 
       <Link

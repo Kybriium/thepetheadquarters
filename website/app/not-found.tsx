@@ -19,8 +19,16 @@ export const metadata: Metadata = {
 
 export default function RootNotFound() {
   return (
-    <html lang="en">
+    // suppressHydrationWarning on both html and body: the root not-found
+    // renders a standalone document (no app/layout.tsx wraps it), so
+    // browser extensions that strip the lang attribute or zero out body
+    // margins (Brave Shields, Dark Reader, reader-mode tools) cause a
+    // hydration mismatch on every 404. The mismatch is cosmetic and
+    // self-corrects on next render — silencing it here keeps the
+    // developer console clean for real bugs.
+    <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         style={{
           margin: 0,
           padding: 0,

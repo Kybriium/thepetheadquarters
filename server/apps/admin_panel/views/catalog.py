@@ -61,6 +61,11 @@ class AdminCategorySerializer(serializers.ModelSerializer):
 
 
 class AdminBrandListView(AdminBaseView):
+    required_permissions = {
+        "GET": "catalog.view",
+        "POST": "catalog.update",
+    }
+
     def get(self, request):
         qs = Brand.objects.all().order_by("sort_order", "id")
         return success_response(data=AdminBrandSerializer(qs, many=True).data)
@@ -87,6 +92,12 @@ class AdminBrandListView(AdminBaseView):
 
 
 class AdminBrandDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "catalog.view",
+        "PATCH": "catalog.update",
+        "DELETE": "catalog.delete",
+    }
+
     def _get(self, brand_id):
         try:
             return Brand.objects.get(id=brand_id)
@@ -133,6 +144,11 @@ class AdminBrandDetailView(AdminBaseView):
 
 
 class AdminCategoryListView(AdminBaseView):
+    required_permissions = {
+        "GET": "catalog.view",
+        "POST": "catalog.update",
+    }
+
     def get(self, request):
         qs = Category.objects.all().order_by("sort_order", "path")
         return success_response(data=AdminCategorySerializer(qs, many=True).data)
@@ -159,6 +175,12 @@ class AdminCategoryListView(AdminBaseView):
 
 
 class AdminCategoryDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "catalog.view",
+        "PATCH": "catalog.update",
+        "DELETE": "catalog.delete",
+    }
+
     def _get(self, category_id):
         try:
             return Category.objects.get(id=category_id)

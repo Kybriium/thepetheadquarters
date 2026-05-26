@@ -41,3 +41,24 @@ class PasswordChangeThrottle(UserRateThrottle):
     rate = "5/minute"
 
 
+class MfaSetupThrottle(UserRateThrottle):
+    # Generating a secret is cheap but issuing a flood is pointless and
+    # noisy in the audit log. 10/min is plenty for a real wizard flow.
+    rate = "10/minute"
+
+
+class MfaVerifyThrottle(UserRateThrottle):
+    # Verifying setup / change / disable. Tight enough to make brute-force
+    # of 6-digit codes useless: a 6-digit window has 1M combinations and
+    # at 10/min an attacker needs ~7 years for a 50% hit rate.
+    rate = "10/minute"
+
+
+class MfaLoginThrottle(AnonRateThrottle):
+    # Anon throttle because the user isn't authed yet — they're holding
+    # a challenge token. Slightly looser than VerifyThrottle to cope with
+    # NAT'd offices, still strict enough to make brute-force impossible
+    # given codes rotate every 30s.
+    rate = "20/minute"
+
+

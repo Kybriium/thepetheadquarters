@@ -184,6 +184,11 @@ class AdminRedemptionSerializer(serializers.ModelSerializer):
 # Views
 # ---------------------------------------------------------------------------
 class AdminPromotionListView(AdminBaseView):
+    required_permissions = {
+        "GET": "promotions.view",
+        "POST": "promotions.update",
+    }
+
     def get(self, request):
         qs = Promotion.objects.all()
 
@@ -282,6 +287,12 @@ class AdminPromotionListView(AdminBaseView):
 
 
 class AdminPromotionDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "promotions.view",
+        "PATCH": "promotions.update",
+        "DELETE": "promotions.delete",
+    }
+
     def _get(self, promotion_id):
         try:
             return Promotion.objects.prefetch_related(
@@ -354,6 +365,8 @@ class AdminPromotionDetailView(AdminBaseView):
 
 
 class AdminPromotionRedemptionsView(AdminBaseView):
+    required_permission = "promotions.view"
+
     def get(self, request, promotion_id):
         try:
             promotion = Promotion.objects.get(id=promotion_id)

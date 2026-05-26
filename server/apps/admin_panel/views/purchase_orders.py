@@ -21,6 +21,11 @@ from apps.admin_panel.views.base import AdminBaseView
 
 
 class AdminPurchaseOrderListView(AdminBaseView):
+    required_permissions = {
+        "GET": "purchase_orders.view",
+        "POST": "purchase_orders.update",
+    }
+
     def get(self, request):
         from django.db.models import Q
 
@@ -111,6 +116,11 @@ class AdminPurchaseOrderListView(AdminBaseView):
 
 
 class AdminPurchaseOrderDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "purchase_orders.view",
+        "PATCH": "purchase_orders.update",
+    }
+
     def _get(self, po_id):
         try:
             return PurchaseOrder.objects.prefetch_related("items").get(id=po_id)
@@ -139,6 +149,8 @@ class AdminPurchaseOrderDetailView(AdminBaseView):
 
 
 class AdminPurchaseOrderSendView(AdminBaseView):
+    required_permission = "purchase_orders.update"
+
     def post(self, request, po_id):
         try:
             po = PurchaseOrder.objects.get(id=po_id)
@@ -155,6 +167,8 @@ class AdminPurchaseOrderSendView(AdminBaseView):
 
 
 class AdminPurchaseOrderReceiveView(AdminBaseView):
+    required_permission = "purchase_orders.receive"
+
     def post(self, request, po_id):
         try:
             po = PurchaseOrder.objects.get(id=po_id)
@@ -179,6 +193,8 @@ class AdminPurchaseOrderReceiveView(AdminBaseView):
 
 
 class AdminPurchaseOrderCancelView(AdminBaseView):
+    required_permission = "purchase_orders.cancel"
+
     def post(self, request, po_id):
         try:
             po = PurchaseOrder.objects.get(id=po_id)

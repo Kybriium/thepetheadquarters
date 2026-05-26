@@ -51,6 +51,11 @@ export const endpoints = {
     passwordChange: `${API_BASE}/auth/password/change/`,
     me: `${API_BASE}/auth/me/`,
     deleteAccount: `${API_BASE}/auth/me/delete/`,
+    mfaSetup: `${API_BASE}/auth/2fa/setup/`,
+    mfaSetupVerify: `${API_BASE}/auth/2fa/setup/verify/`,
+    mfaDisable: `${API_BASE}/auth/2fa/disable/`,
+    mfaLogin: `${API_BASE}/auth/2fa/login/`,
+    mfaRegenBackupCodes: `${API_BASE}/auth/2fa/backup-codes/regenerate/`,
   },
   addresses: {
     list: `${API_BASE}/addresses/`,
@@ -205,6 +210,16 @@ export const endpoints = {
       telegram: `${API_BASE}/admin/integrations/telegram/`,
       telegramDiscover: `${API_BASE}/admin/integrations/telegram/discover/`,
       telegramTest: `${API_BASE}/admin/integrations/telegram/test/`,
+    },
+    team: {
+      list: `${API_BASE}/admin/team/`,
+      role: (id: string) => `${API_BASE}/admin/team/${id}/role/`,
+    },
+    roles: {
+      list: `${API_BASE}/admin/roles/`,
+      detail: (code: string) => `${API_BASE}/admin/roles/${code}/`,
+      clone: (code: string) => `${API_BASE}/admin/roles/${code}/clone/`,
+      catalogue: `${API_BASE}/admin/roles/catalogue/`,
     },
     customizations: {
       templates: `${API_BASE}/admin/customizations/templates/`,

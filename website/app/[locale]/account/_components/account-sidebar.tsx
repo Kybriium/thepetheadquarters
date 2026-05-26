@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, MapPin, Lock, Package, LogOut } from "lucide-react";
+import { User, MapPin, Lock, Shield, Package, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import type enAuth from "@/i18n/dictionaries/en/auth.json";
 
@@ -14,6 +14,7 @@ const navItems = [
   { key: "profile" as const, href: "/account", icon: User },
   { key: "addresses" as const, href: "/account/addresses", icon: MapPin },
   { key: "password" as const, href: "/account/password", icon: Lock },
+  { key: "security" as const, href: "/account/security", icon: Shield },
   { key: "orders" as const, href: "/account/orders", icon: Package },
 ];
 

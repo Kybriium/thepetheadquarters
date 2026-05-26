@@ -70,6 +70,8 @@ class AdminCustomerDetailSerializer(serializers.ModelSerializer):
 
 
 class AdminCustomerListView(AdminBaseView):
+    required_permission = "customers.view"
+
     def get(self, request):
         qs = (
             User.objects.exclude(is_staff=True)
@@ -146,6 +148,11 @@ class AdminCustomerListView(AdminBaseView):
 
 
 class AdminCustomerDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "customers.view",
+        "PATCH": "customers.update",
+    }
+
     def get(self, request, customer_id):
         try:
             user = User.objects.prefetch_related("addresses").get(id=customer_id)

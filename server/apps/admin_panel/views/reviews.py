@@ -46,6 +46,8 @@ class AdminReviewSerializer(serializers.ModelSerializer):
 
 
 class AdminReviewListView(AdminBaseView):
+    required_permission = "reviews.view"
+
     def get(self, request):
         qs = Review.objects.select_related("product", "user").all()
 
@@ -104,6 +106,12 @@ class AdminReviewListView(AdminBaseView):
 
 
 class AdminReviewDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "reviews.view",
+        "PATCH": "reviews.moderate",
+        "DELETE": "reviews.delete",
+    }
+
     def _get(self, review_id):
         try:
             return Review.objects.select_related("product", "user").get(id=review_id)

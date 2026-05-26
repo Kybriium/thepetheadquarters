@@ -68,6 +68,8 @@ class StockBatchSerializer(serializers.ModelSerializer):
 
 
 class AdminInventoryListView(AdminBaseView):
+    required_permission = "inventory.view"
+
     def get(self, request):
         qs = ProductVariant.objects.select_related("product").filter(is_active=True)
 
@@ -120,6 +122,8 @@ class AdminInventoryListView(AdminBaseView):
 
 
 class AdminInventoryUpdateView(AdminBaseView):
+    required_permission = "inventory.update"
+
     def patch(self, request, variant_id):
         try:
             variant = ProductVariant.objects.get(id=variant_id)
@@ -138,12 +142,16 @@ class AdminInventoryUpdateView(AdminBaseView):
 
 
 class AdminInventoryMovementsView(AdminBaseView):
+    required_permission = "inventory.view"
+
     def get(self, request, variant_id):
         movements = StockMovement.objects.filter(variant_id=variant_id).order_by("-created_at")[:200]
         return success_response(data=StockMovementSerializer(movements, many=True).data)
 
 
 class AdminInventoryBatchesView(AdminBaseView):
+    required_permission = "inventory.view"
+
     def get(self, request, variant_id):
         batches = StockBatch.objects.filter(variant_id=variant_id).order_by("received_at")
         return success_response(data=StockBatchSerializer(batches, many=True).data)

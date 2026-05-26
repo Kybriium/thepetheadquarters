@@ -47,6 +47,8 @@ VALID_STATUS_TRANSITIONS = {
 
 
 class AdminOrderListView(AdminBaseView):
+    required_permission = "orders.view"
+
     def get(self, request):
         qs = Order.objects.all().prefetch_related("items").order_by("-created_at")
 
@@ -95,6 +97,8 @@ class AdminOrderListView(AdminBaseView):
 
 
 class AdminOrderDetailView(AdminBaseView):
+    required_permission = "orders.view"
+
     def get(self, request, order_number):
         try:
             order = Order.objects.prefetch_related("items").get(order_number=order_number)
@@ -104,6 +108,8 @@ class AdminOrderDetailView(AdminBaseView):
 
 
 class AdminOrderStatusView(AdminBaseView):
+    required_permission = "orders.update"
+
     def post(self, request, order_number):
         try:
             order = Order.objects.get(order_number=order_number)
@@ -130,6 +136,8 @@ class AdminOrderStatusView(AdminBaseView):
 
 
 class AdminOrderShipView(AdminBaseView):
+    required_permission = "orders.ship"
+
     def post(self, request, order_number):
         try:
             order = Order.objects.get(order_number=order_number)
@@ -165,6 +173,8 @@ class AdminOrderShipView(AdminBaseView):
 
 
 class AdminOrderCancelView(AdminBaseView):
+    required_permission = "orders.cancel"
+
     def post(self, request, order_number):
         try:
             order = Order.objects.get(order_number=order_number)
@@ -182,6 +192,8 @@ class AdminOrderCancelView(AdminBaseView):
 
 
 class AdminOrderRefundView(AdminBaseView):
+    required_permission = "orders.refund"
+
     def post(self, request, order_number):
         try:
             order = Order.objects.get(order_number=order_number)
@@ -200,6 +212,8 @@ class AdminOrderRefundView(AdminBaseView):
 
 
 class AdminOrderNotesView(AdminBaseView):
+    required_permission = "orders.update"
+
     def patch(self, request, order_number):
         try:
             order = Order.objects.get(order_number=order_number)
@@ -213,6 +227,8 @@ class AdminOrderNotesView(AdminBaseView):
 
 
 class AdminDropshipPendingView(AdminBaseView):
+    required_permission = "orders.view"
+
     def get(self, request):
         items = (
             OrderItem.objects.filter(
@@ -257,6 +273,8 @@ class AdminOrderEmailCustomerView(AdminBaseView):
 
     # Rate-limit at the throttle layer would be nice but for now we
     # trust staff users not to spam customers.
+
+    required_permission = "orders.update"
 
     MAX_SUBJECT_LEN = 200
     MAX_BODY_LEN = 5000
@@ -314,6 +332,8 @@ class AdminOrderEmailCustomerView(AdminBaseView):
 
 class AdminOrderForwardItemView(AdminBaseView):
     """Mark a dropship order item as forwarded to its supplier."""
+
+    required_permission = "orders.ship"
 
     def post(self, request, order_number, item_id):
         try:

@@ -88,6 +88,8 @@ def _parse_range(request) -> tuple[date, date]:
 # ---------------------------------------------------------------------------
 
 class AdminFinancesOverviewView(AdminBaseView):
+    required_permission = "finances.view"
+
     def get(self, request):
         date_from, date_to = _parse_range(request)
 
@@ -170,6 +172,11 @@ class AdminFinancesOverviewView(AdminBaseView):
 class AdminExpenseListView(AdminBaseView):
     """List existing expenses (paginated) + create a new manual one."""
 
+    required_permissions = {
+        "GET": "expenses.view",
+        "POST": "expenses.update",
+    }
+
     def get(self, request):
         date_from, date_to = _parse_range(request)
         qs = Expense.objects.filter(
@@ -208,6 +215,12 @@ class AdminExpenseListView(AdminBaseView):
 
 class AdminExpenseDetailView(AdminBaseView):
     """Get / update / delete a single expense (auto rows can still be patched for notes & receipt)."""
+
+    required_permissions = {
+        "GET": "expenses.view",
+        "PATCH": "expenses.update",
+        "DELETE": "expenses.delete",
+    }
 
     def _get(self, expense_id):
         try:
@@ -277,6 +290,8 @@ class AdminExpenseReceiptFileView(AdminBaseView):
     a sensible response in both modes.
     """
 
+    required_permission = "expenses.view"
+
     def get(self, request, expense_id):
         try:
             expense = Expense.objects.get(id=expense_id)
@@ -308,6 +323,8 @@ class AdminExpenseReceiptView(AdminBaseView):
 
     # Multipart parser is configured globally in DRF settings; we just
     # need to accept request.FILES here.
+
+    required_permission = "expenses.update"
 
     MAX_BYTES = 15 * 1024 * 1024  # 15MB — covers high-res phone photos
     ALLOWED_MIME_PREFIXES = ("image/", "application/pdf")
@@ -375,6 +392,8 @@ class AdminFinancesExportView(AdminBaseView):
     accountant should grab the files separately if they need long-lived
     archives.
     """
+
+    required_permission = "finances.export"
 
     def get(self, request):
         date_from, date_to = _parse_range(request)

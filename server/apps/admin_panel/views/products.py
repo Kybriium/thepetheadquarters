@@ -29,6 +29,11 @@ from apps.admin_panel.views.base import AdminBaseView
 
 
 class AdminProductListView(AdminBaseView):
+    required_permissions = {
+        "GET": "products.view",
+        "POST": "products.update",
+    }
+
     def get(self, request):
         from django.db.models import Sum, Min, Q
 
@@ -137,6 +142,12 @@ class AdminProductListView(AdminBaseView):
 
 
 class AdminProductDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "products.view",
+        "PATCH": "products.update",
+        "DELETE": "products.delete",
+    }
+
     def _get(self, product_id):
         try:
             return Product.objects.prefetch_related(
@@ -254,6 +265,8 @@ def _apply_option_values(product, variant, option_value_ids):
 
 
 class AdminProductVariantsView(AdminBaseView):
+    required_permission = "products.update"
+
     @transaction.atomic
     def post(self, request, product_id):
         try:
@@ -286,6 +299,8 @@ class AdminProductVariantsView(AdminBaseView):
 
 
 class AdminVariantDetailView(AdminBaseView):
+    required_permission = "products.update"
+
     @transaction.atomic
     def patch(self, request, variant_id):
         try:
@@ -330,6 +345,8 @@ class AdminProductVariantsBulkView(AdminBaseView):
     combinations are skipped (idempotent). Useful for the Temu/Amazon-style
     'Color × Size → 9 SKUs' admin flow.
     """
+
+    required_permission = "products.update"
 
     @transaction.atomic
     def post(self, request, product_id):
@@ -393,6 +410,8 @@ class AdminProductVariantsBulkView(AdminBaseView):
 
 
 class AdminProductImagesView(AdminBaseView):
+    required_permission = "products.update"
+
     def post(self, request, product_id):
         try:
             product = Product.objects.get(id=product_id)
@@ -416,6 +435,8 @@ class AdminProductImagesView(AdminBaseView):
 
 
 class AdminImageDetailView(AdminBaseView):
+    required_permission = "products.update"
+
     def _get(self, image_id):
         try:
             return ProductImage.objects.get(id=image_id)

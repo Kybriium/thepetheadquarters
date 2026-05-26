@@ -69,6 +69,12 @@ def _singleton() -> TelegramConfig | None:
 class AdminTelegramConfigView(AdminBaseView):
     """GET current config; PUT to save token/chats/events; DELETE to disconnect."""
 
+    required_permissions = {
+        "GET": "integrations.view",
+        "PATCH": "integrations.update",
+        "DELETE": "integrations.update",
+    }
+
     def get(self, request):
         return success_response(_serialize(_singleton()))
 
@@ -165,6 +171,8 @@ class AdminTelegramDiscoverView(AdminBaseView):
     since the last discovery and merge them into chat_targets.
     """
 
+    required_permission = "integrations.update"
+
     def post(self, request):
         config = _singleton()
         if not config:
@@ -182,6 +190,8 @@ class AdminTelegramDiscoverView(AdminBaseView):
 class AdminTelegramTestView(AdminBaseView):
     """Send a hard-coded test message to all enabled chats so the admin can
     visually confirm the wiring works before relying on it for real events."""
+
+    required_permission = "integrations.update"
 
     def post(self, request):
         config = _singleton()

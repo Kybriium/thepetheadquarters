@@ -47,6 +47,8 @@ class AdminAuditDetailSerializer(serializers.ModelSerializer):
 
 
 class AdminAuditListView(AdminBaseView):
+    required_permission = "audit.view"
+
     def get(self, request):
         qs = AuditLog.objects.all().select_related("user").order_by("-created_at")
 
@@ -67,6 +69,8 @@ class AdminAuditListView(AdminBaseView):
 
 
 class AdminAuditDetailView(AdminBaseView):
+    required_permission = "audit.view"
+
     def get(self, request, log_id):
         try:
             log = AuditLog.objects.select_related("user").get(id=log_id)

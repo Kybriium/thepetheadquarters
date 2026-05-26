@@ -6,6 +6,11 @@ from apps.accounts.views import (
     AddressListCreateView,
     LoginView,
     LogoutView,
+    MfaDisableView,
+    MfaLoginView,
+    MfaRegenerateBackupCodesView,
+    MfaSetupVerifyView,
+    MfaSetupView,
     PasswordChangeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -28,6 +33,12 @@ auth_urlpatterns = [
     path("password/change/", PasswordChangeView.as_view()),
     path("me/", ProfileView.as_view()),
     path("me/delete/", AccountDeleteView.as_view()),
+    # 2FA / TOTP
+    path("2fa/setup/", MfaSetupView.as_view()),
+    path("2fa/setup/verify/", MfaSetupVerifyView.as_view()),
+    path("2fa/disable/", MfaDisableView.as_view()),
+    path("2fa/login/", MfaLoginView.as_view()),
+    path("2fa/backup-codes/regenerate/", MfaRegenerateBackupCodesView.as_view()),
 ]
 
 address_urlpatterns = [

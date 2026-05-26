@@ -180,6 +180,26 @@ expect "Admin dashboard requires auth" "401|403"
 call POST /auth/login/ "{\"email\":\"${EMAIL}\",\"password\":\"${PASSWORD}\"}"
 expect "Login as ${EMAIL}" "200"
 
+# 2FA step. If the admin has MFA enabled, /auth/login/ returns
+# {requires_2fa, challenge_token} instead of setting cookies, and any
+# admin endpoint then fails with 403 auth.mfa_required. To keep the
+# script working without baking a TOTP generator into bash, we look
+# for a TPH_SMOKE_MFA_SECRET env var (the base32 secret the admin
+# scanned into their authenticator app). If set, we compute the
+# current code via python's pyotp and complete the challenge.
+if echo "$RESPONSE_BODY" | grep -q '"requires_2fa"'; then
+  if [ -z "${TPH_SMOKE_MFA_SECRET:-}" ]; then
+    echo "✗ Admin has 2FA on but TPH_SMOKE_MFA_SECRET is not set." >&2
+    echo "  Save your TOTP base32 secret (the same one your authenticator" >&2
+    echo "  app uses) to this env var and re-run." >&2
+    exit 1
+  fi
+  CHALLENGE_TOKEN=$(echo "$RESPONSE_BODY" | json_get "data.challenge_token")
+  MFA_CODE=$(python3 -c "import pyotp,sys; print(pyotp.TOTP(sys.argv[1]).now())" "$TPH_SMOKE_MFA_SECRET")
+  call POST /auth/2fa/login/ "{\"challenge_token\":\"${CHALLENGE_TOKEN}\",\"code\":\"${MFA_CODE}\"}"
+  expect "Complete 2FA login" "200"
+fi
+
 call GET /admin/dashboard/
 expect "Admin dashboard authenticated" "200"
 

@@ -61,6 +61,11 @@ class AdminSupplierProductSerializer(serializers.ModelSerializer):
 
 
 class AdminSupplierListView(AdminBaseView):
+    required_permissions = {
+        "GET": "suppliers.view",
+        "POST": "suppliers.update",
+    }
+
     def get(self, request):
         qs = Supplier.objects.all()
 
@@ -108,6 +113,12 @@ class AdminSupplierListView(AdminBaseView):
 
 
 class AdminSupplierDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "suppliers.view",
+        "PATCH": "suppliers.update",
+        "DELETE": "suppliers.delete",
+    }
+
     def _get(self, supplier_id):
         try:
             return Supplier.objects.get(id=supplier_id)
@@ -140,6 +151,11 @@ class AdminSupplierDetailView(AdminBaseView):
 
 
 class AdminSupplierProductsView(AdminBaseView):
+    required_permissions = {
+        "GET": "suppliers.view",
+        "POST": "suppliers.update",
+    }
+
     def get(self, request, supplier_id):
         items = SupplierProduct.objects.filter(supplier_id=supplier_id).select_related("variant__product")
         return success_response(data=AdminSupplierProductSerializer(items, many=True).data)
@@ -167,6 +183,11 @@ class AdminSupplierProductsView(AdminBaseView):
 
 class AdminVariantSuppliersView(AdminBaseView):
     """List + create supplier-product links for a single ProductVariant."""
+
+    required_permissions = {
+        "GET": "suppliers.view",
+        "POST": "suppliers.update",
+    }
 
     def get(self, request, variant_id):
         from apps.products.models import ProductVariant
@@ -202,6 +223,8 @@ class AdminVariantSuppliersView(AdminBaseView):
 class AdminSupplierProductDetailView(AdminBaseView):
     """Edit / delete a single SupplierProduct row by its UUID."""
 
+    required_permission = "suppliers.update"
+
     def _get(self, sp_id):
         try:
             return SupplierProduct.objects.select_related("supplier", "variant__product").get(id=sp_id)
@@ -235,6 +258,8 @@ class AdminSupplierProductDetailView(AdminBaseView):
 
 
 class AdminSupplierPurchasesView(AdminBaseView):
+    required_permission = "purchase_orders.view"
+
     def get(self, request, supplier_id):
         from apps.admin_panel.serializers.procurement import AdminPurchaseOrderListSerializer
         pos = PurchaseOrder.objects.filter(supplier_id=supplier_id).order_by("-created_at")

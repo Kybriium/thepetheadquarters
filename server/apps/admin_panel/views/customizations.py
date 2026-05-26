@@ -38,6 +38,11 @@ VALID_FIELD_TYPES = {choice[0] for choice in FieldType.choices}
 
 
 class AdminCustomizationTemplateListView(AdminBaseView):
+    required_permissions = {
+        "GET": "products.view",
+        "POST": "products.update",
+    }
+
     def get(self, request):
         templates = (
             CustomizationTemplate.objects.all()
@@ -67,6 +72,12 @@ class AdminCustomizationTemplateListView(AdminBaseView):
 
 
 class AdminCustomizationTemplateDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "products.view",
+        "PATCH": "products.update",
+        "DELETE": "products.update",
+    }
+
     def _get(self, template_id):
         try:
             return CustomizationTemplate.objects.prefetch_related(
@@ -132,6 +143,8 @@ def _normalize_field_payload(data: dict) -> dict | str:
 class AdminTemplateFieldsView(AdminBaseView):
     """Create a field on a template."""
 
+    required_permission = "products.update"
+
     def post(self, request, template_id):
         try:
             tpl = CustomizationTemplate.objects.get(id=template_id)
@@ -149,6 +162,8 @@ class AdminTemplateFieldsView(AdminBaseView):
 class AdminProductFieldsView(AdminBaseView):
     """Create an ad-hoc field directly on a product."""
 
+    required_permission = "products.update"
+
     def post(self, request, product_id):
         try:
             product = Product.objects.get(id=product_id)
@@ -165,6 +180,8 @@ class AdminProductFieldsView(AdminBaseView):
 
 class AdminFieldDetailView(AdminBaseView):
     """Update or delete a single field (template or ad-hoc)."""
+
+    required_permission = "products.update"
 
     def _get(self, field_id):
         try:
@@ -211,6 +228,8 @@ class AdminFieldDetailView(AdminBaseView):
 class AdminFieldOptionsView(AdminBaseView):
     """Create an option on a field."""
 
+    required_permission = "products.update"
+
     def post(self, request, field_id):
         try:
             field = CustomizationField.objects.get(id=field_id)
@@ -234,6 +253,8 @@ class AdminFieldOptionsView(AdminBaseView):
 
 
 class AdminFieldOptionDetailView(AdminBaseView):
+    required_permission = "products.update"
+
     def _get(self, option_id):
         try:
             return CustomizationFieldOption.objects.get(id=option_id)
@@ -269,6 +290,11 @@ class AdminFieldOptionDetailView(AdminBaseView):
 
 class AdminProductCustomizationsView(AdminBaseView):
     """List/replace customization template attachments + ad-hoc fields on a product."""
+
+    required_permissions = {
+        "GET": "products.view",
+        "POST": "products.update",
+    }
 
     def get(self, request, product_id):
         try:
@@ -317,6 +343,8 @@ class AdminProductCustomizationsView(AdminBaseView):
 
 class AdminProductCustomizationDetailView(AdminBaseView):
     """Detach a template from a product."""
+
+    required_permission = "products.update"
 
     def delete(self, request, product_id, link_id):
         try:

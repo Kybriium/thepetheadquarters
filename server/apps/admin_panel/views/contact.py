@@ -24,6 +24,8 @@ class AdminContactMessageSerializer(serializers.ModelSerializer):
 
 
 class AdminContactMessageListView(AdminBaseView):
+    required_permission = "contact.view"
+
     def get(self, request):
         qs = ContactMessage.objects.all()
 
@@ -65,6 +67,12 @@ class AdminContactMessageListView(AdminBaseView):
 
 
 class AdminContactMessageDetailView(AdminBaseView):
+    required_permissions = {
+        "GET": "contact.view",
+        "PATCH": "contact.respond",
+        "DELETE": "contact.respond",
+    }
+
     def _get(self, message_id):
         try:
             return ContactMessage.objects.get(id=message_id)

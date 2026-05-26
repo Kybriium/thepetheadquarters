@@ -33,6 +33,10 @@ class LoginSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    mfa = serializers.SerializerMethodField()
+    mfa_required = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -43,9 +47,56 @@ class ProfileSerializer(serializers.ModelSerializer):
             "phone",
             "is_email_verified",
             "is_staff",
+            "role",
+            "permissions",
             "created_at",
+            "mfa",
+            "mfa_required",
         ]
-        read_only_fields = ["id", "email", "is_email_verified", "is_staff", "created_at"]
+        read_only_fields = [
+            "id",
+            "email",
+            "is_email_verified",
+            "is_staff",
+            "role",
+            "permissions",
+            "created_at",
+            "mfa",
+            "mfa_required",
+        ]
+
+    def get_permissions(self, obj):
+        # Empty list for customer users — saves the frontend a None
+        # check on every permission lookup. Sorted for stable shape.
+        return sorted(obj.admin_permissions)
+
+    def _get_mfa_record(self, obj):
+        try:
+            return obj.mfa
+        except Exception:
+            return None
+
+    def get_mfa(self, obj):
+        # Returns {enabled, enabled_at} so the frontend can render the
+        # "2FA is ON since …" status line. enabled_at is null when the
+        # user has started setup but not yet verified the first code.
+        mfa = self._get_mfa_record(obj)
+        if mfa is None:
+            return {"enabled": False, "enabled_at": None}
+        return {
+            "enabled": mfa.is_enabled,
+            "enabled_at": mfa.enabled_at.isoformat() if mfa.enabled_at else None,
+        }
+
+    def get_mfa_required(self, obj):
+        # Staff users *must* have 2FA on. Frontend uses this flag to
+        # hard-redirect to the setup wizard from the admin layout.
+        # Backend also enforces this via IsStaffWithMfa on admin views,
+        # so this is purely UX — the gate isn't trusting the client.
+        if not obj.is_staff:
+            return False
+        mfa = self._get_mfa_record(obj)
+        return mfa is None or not mfa.is_enabled
 
 
 class ProfileUpdateSerializer(serializers.Serializer):
@@ -78,6 +129,41 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 class VerifyEmailSerializer(serializers.Serializer):
     token = serializers.CharField()
+
+
+class MfaCodeSerializer(serializers.Serializer):
+    """Six-digit TOTP code from an authenticator app."""
+
+    code = serializers.RegexField(regex=r"^\d{6}$")
+
+
+class MfaDisableSerializer(serializers.Serializer):
+    """
+    Disabling 2FA is a privileged action — require both the current
+    password (proves the session isn't just a stolen cookie) and a live
+    code or backup code (proves possession of the second factor).
+    """
+
+    password = serializers.CharField()
+    code = serializers.CharField(min_length=6, max_length=16)
+
+
+class MfaLoginSerializer(serializers.Serializer):
+    """
+    Step-2 login submission. `code` accepts either a 6-digit TOTP code
+    or a backup code (longer alphanumeric). The view decides which path
+    to try.
+    """
+
+    challenge_token = serializers.CharField()
+    code = serializers.CharField(min_length=6, max_length=16)
+
+
+class MfaRegenBackupSerializer(serializers.Serializer):
+    """Regenerating backup codes re-prompts both factors, same as disable."""
+
+    password = serializers.CharField()
+    code = serializers.CharField(min_length=6, max_length=16)
 
 
 class AddressSerializer(serializers.ModelSerializer):

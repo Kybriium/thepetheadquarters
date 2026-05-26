@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { defaultLocale, isValidLocale } from "@/i18n/config";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -11,7 +12,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      const locale = pathname.split("/")[1] || "en";
+      // proxy.ts rewrites bare paths (/account/x) to /<defaultLocale>/account/x
+      // internally, so usePathname can return either form. Treat the first
+      // segment as the locale only when it's actually a valid one;
+      // otherwise fall back to the default. Without this guard, navigating
+      // from /account/security produces /account/account/login (because
+      // split("/")[1] returns "account", not "en").
+      const segment = pathname.split("/")[1] ?? "";
+      const locale = isValidLocale(segment) ? segment : defaultLocale;
       router.replace(`/${locale}/account/login?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [isLoading, isAuthenticated, router, pathname]);

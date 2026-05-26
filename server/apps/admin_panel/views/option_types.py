@@ -53,6 +53,11 @@ def _serialize_option_type(ot: OptionType) -> dict:
 
 
 class AdminOptionTypeListView(AdminBaseView):
+    required_permissions = {
+        "GET": "products.view",
+        "POST": "products.update",
+    }
+
     def get(self, request):
         types = (
             OptionType.objects.all()
@@ -77,6 +82,8 @@ class AdminOptionTypeListView(AdminBaseView):
 
 
 class AdminOptionTypeDetailView(AdminBaseView):
+    required_permission = "products.update"
+
     def _get(self, option_type_id):
         try:
             return OptionType.objects.prefetch_related(
@@ -117,6 +124,8 @@ class AdminOptionTypeDetailView(AdminBaseView):
 class AdminOptionTypeValuesView(AdminBaseView):
     """Create a value under an existing option type."""
 
+    required_permission = "products.update"
+
     @transaction.atomic
     def post(self, request, option_type_id):
         try:
@@ -142,6 +151,8 @@ class AdminOptionTypeValuesView(AdminBaseView):
 
 
 class AdminOptionValueDetailView(AdminBaseView):
+    required_permission = "products.update"
+
     def _get(self, value_id):
         try:
             return OptionValue.objects.get(id=value_id)
@@ -185,6 +196,11 @@ class AdminOptionValueDetailView(AdminBaseView):
 
 class AdminProductOptionTypesView(AdminBaseView):
     """List, attach, or detach the axes a product is variantable along."""
+
+    required_permissions = {
+        "GET": "products.view",
+        "POST": "products.update",
+    }
 
     def get(self, request, product_id):
         try:
@@ -244,6 +260,8 @@ class AdminProductOptionTypesView(AdminBaseView):
 
 class AdminProductOptionTypeDetailView(AdminBaseView):
     """Detach an axis from a product."""
+
+    required_permission = "products.update"
 
     def delete(self, request, product_id, link_id):
         try:

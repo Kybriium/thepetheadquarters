@@ -43,6 +43,8 @@ def _parse_date_range(request) -> tuple[date, date]:
 # Overview report — stats + time series + top lists + funnel
 # ---------------------------------------------------------------------------
 class AdminAnalyticsOverviewView(AdminBaseView):
+    required_permission = "analytics.view"
+
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
         end = timezone.make_aware(
@@ -203,6 +205,8 @@ class AdminVisitorListSerializer(serializers.ModelSerializer):
 
 
 class AdminAnalyticsVisitorListView(AdminBaseView):
+    required_permission = "analytics.view"
+
     def get(self, request):
         qs = Visitor.objects.select_related("user").all()
 
@@ -298,6 +302,8 @@ class _SessionInspectorSerializer(serializers.ModelSerializer):
 
 
 class AdminAnalyticsVisitorDetailView(AdminBaseView):
+    required_permission = "analytics.view"
+
     def get(self, request, visitor_id):
         try:
             visitor = Visitor.objects.select_related("user").get(id=visitor_id)

@@ -36,6 +36,8 @@ def _parse_date_range(request):
 
 
 class AdminSalesReportView(AdminBaseView):
+    required_permission = "reports.view"
+
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
 
@@ -71,6 +73,8 @@ class AdminSalesReportView(AdminBaseView):
 
 
 class AdminSalesReportExportView(AdminBaseView):
+    required_permission = "reports.export"
+
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
 
@@ -106,6 +110,8 @@ class AdminSalesReportExportView(AdminBaseView):
 
 
 class AdminInventoryValuationView(AdminBaseView):
+    required_permission = "reports.view"
+
     def get(self, request):
         # Sum of all remaining stock × cost across all batches
         total_value = StockBatch.objects.aggregate(
@@ -146,6 +152,8 @@ class AdminInventoryValuationView(AdminBaseView):
 
 
 class AdminTopProductsView(AdminBaseView):
+    required_permission = "reports.view"
+
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
 
@@ -167,6 +175,8 @@ class AdminTopProductsView(AdminBaseView):
 
 
 class AdminTopSuppliersView(AdminBaseView):
+    required_permission = "reports.view"
+
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
 
@@ -188,6 +198,8 @@ class AdminTopSuppliersView(AdminBaseView):
 
 
 class AdminVatReturnView(AdminBaseView):
+    required_permission = "reports.view"
+
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
 
@@ -215,6 +227,8 @@ class AdminVatReturnView(AdminBaseView):
 
 
 class AdminVatReturnExportView(AdminBaseView):
+    required_permission = "reports.export"
+
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
 
@@ -264,7 +278,13 @@ class AdminPromotionsReportView(AdminBaseView):
 
     Returns global totals plus a per-code and per-source breakdown
     over the requested date range (defaults to last 30 days).
+
+    Gated by reports.view (not promotions.view) — this is a report
+    surface, so Auditor/Order Mgr/etc. should be able to see it even
+    if they can't edit promotions. Marketing already has reports.view.
     """
+
+    required_permission = "reports.view"
 
     def get(self, request):
         date_from, date_to = _parse_date_range(request)
